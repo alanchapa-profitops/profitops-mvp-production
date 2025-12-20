@@ -1,65 +1,220 @@
-import Image from "next/image";
+"use client"
 
-export default function Home() {
+import { useState, useEffect } from "react"
+import { Header } from "@/components/header"
+import { MetricsBar } from "@/components/metrics-bar"
+import { PipelineBoard } from "@/components/pipeline-board"
+import { SprintMetrics } from "@/components/sprint-metrics"
+import { SprintBoard } from "@/components/sprint-board"
+import { ChatView } from "@/components/chat-view"
+import { IntelligenceView } from "@/components/intelligence-view"
+import { ReportsView } from "@/components/reports-view"
+import { PipedriveService, PipedriveResponse } from "@/lib/pipedrive-service"
+import type { Deal } from "@/types/deal"
+
+export default function HomePage() {
+  const [activeView, setActiveView] = useState<"sprint" | "radar" | "coach" | "intelligence" | "reports">("sprint")
+  const [isDarkMode, setIsDarkMode] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [pipedriveData, setPipedriveData] = useState<PipedriveResponse | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
+  const [chatDealId, setChatDealId] = useState<string | null>(null)
+
+  // Load real data from Pipedrive on component mount
+  useEffect(() => {
+    loadPipedriveData()
+  }, [])
+
+  const loadPipedriveData = async () => {
+    try {
+      setIsLoading(true)
+      console.log('🔄 Loading Pipedrive data...')
+      
+      const data = await PipedriveService.fetchPipelineData()
+      setPipedriveData(data)
+      
+      // Map Sprint deals
+      const sprintDeals = [
+        ...data.sprint.deals_criticos,
+        ...data.sprint.deals_con_momentum, 
+        ...data.sprint.deals_para_reactivar
+      ]
+      
+      // Map Radar deals
+      const radarDeals = [
+        ...data.radar.prospeccion.deals,
+        ...data.radar.discovery.deals,
+        ...data.radar.propuesta.deals,
+        ...data.radar.negociacion.deals,
+        ...data.radar.cierre.deals
+      ]
+      
+      // Combine all deals and remove duplicates by deal_id
+      const allDeals = [...sprintDeals, ...radarDeals]
+      const uniqueDeals = allDeals.filter((deal, index, self) => 
+        index === self.findIndex(d => d.deal_id === deal.deal_id)
+      )
+      
+      const mappedDeals = uniqueDeals.map((deal, index) => PipedriveService.mapPipedriveDealToFrontend(deal, index))
+      setDeals(mappedDeals)
+      
+      console.log('✅ Pipedrive data loaded successfully!')
+      console.log(`📊 Total deals: ${mappedDeals.length}`)
+      console.log(`📊 Sprint deals: ${sprintDeals.length}, Radar deals: ${radarDeals.length}, Combined unique: ${uniqueDeals.length}`)
+    } catch (error) {
+      console.error('❌ Error loading Pipedrive data:', error)
+      // Keep empty array if error, don't crash the app
+      setDeals([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const toggleFavorite = (dealId: string) => {
+    const deal = deals.find((d) => d.id === dealId)
+    if (!deal) return
+
+    if (!deal.isFavorite) {
+      setSelectedDeal(deal)
+      setModalOpen(true)
+    } else {
+      setDeals((prevDeals) =>
+        prevDeals.map((d) => (d.id === dealId ? { ...d, isFavorite: false, sprintCategory: null } : d)),
+      )
+    }
+  }
+
+  const handleCategorySelect = (category: "reactivar" | "critico" | "momentum") => {
+    if (!selectedDeal) return
+
+    setDeals((prevDeals) =>
+      prevDeals.map((deal) =>
+        deal.id === selectedDeal.id ? { ...deal, isFavorite: true, sprintCategory: category } : deal,
+      ),
+    )
+
+    setModalOpen(false)
+    setSelectedDeal(null)
+  }
+
+  const handleUpdateDeal = (dealId: string, updates: Partial<Deal>) => {
+    setDeals((prevDeals) => prevDeals.map((deal) => (deal.id === dealId ? { ...deal, ...updates } : deal)))
+  }
+
+  const handleCreateDeal = (dealData: {
+    company: string
+    contactName: string
+    contactEmail: string
+    source: Deal["source"]
+    imrValue: number
+    tcvValue: number
+    contractDurationMonths: number
+    expectedCloseDate: string
+    stage: string
+    chatCategory: string
+  }) => {
+    const newDeal: Deal = {
+      id: `deal-${Date.now()}`,
+      company: dealData.company,
+      contactName: dealData.contactName,
+      contactEmail: dealData.contactEmail,
+      source: dealData.source,
+      imrValue: dealData.imrValue,
+      tcvValue: dealData.tcvValue,
+      contractDurationMonths: dealData.contractDurationMonths,
+      daysInStage: 0,
+      nextActivity: "",
+      activityDate: "",
+      expectedCloseDate: dealData.expectedCloseDate,
+      stage: dealData.stage,
+      isFavorite: false,
+      sprintCategory: null,
+      chatCategory: dealData.chatCategory,
+    }
+
+    setDeals((prevDeals) => [...prevDeals, newDeal])
+  }
+
+  const handleOpenChat = (dealId: string) => {
+    console.log('🎯 handleOpenChat called with dealId:', dealId)
+    setChatDealId(dealId)
+    setActiveView("coach")
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? "dark" : ""}`}>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Cargando datos de Pipedrive...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className={`min-h-screen ${isDarkMode ? "dark" : ""}`}>
+      <div className="min-h-screen bg-background">
+        <Header
+          activeView={activeView}
+          onViewChange={setActiveView}
+          isDarkMode={isDarkMode}
+          onThemeToggle={() => setIsDarkMode(!isDarkMode)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        
+        {/* Real-time data indicator */}
+        <div className="bg-green-600 text-white text-sm px-4 py-2 text-center">
+          ✅ Conectado a Pipedrive - Datos en tiempo real 
+          {pipedriveData && ` | ${pipedriveData.radar.total_deals} deals | Pipeline: $${pipedriveData.radar.pipeline_total_imr.toLocaleString()}`}
+          <button 
+            onClick={loadPipedriveData} 
+            className="ml-4 px-2 py-1 bg-green-700 rounded text-xs hover:bg-green-800"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            🔄 Actualizar
+          </button>
+        </div>
+
+        <main className="container mx-auto px-4 py-6 space-y-6">
+          {activeView === "sprint" ? (
+            <>
+              <SprintMetrics />
+              <SprintBoard deals={deals} onOpenChat={handleOpenChat} />
+            </>
+          ) : activeView === "coach" ? (
+            <ChatView
+              deals={deals}
+              onUpdateDeal={handleUpdateDeal}
+              onCreateDeal={handleCreateDeal}
+              initialDealId={chatDealId}
+              onDealSelect={() => setChatDealId(null)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+          ) : activeView === "intelligence" ? (
+            <IntelligenceView deals={deals} />
+          ) : activeView === "reports" ? (
+            <ReportsView />
+          ) : (
+            <>
+              <MetricsBar />
+              <PipelineBoard
+                pipedriveData={pipedriveData}
+                modalOpen={modalOpen}
+                selectedDeal={selectedDeal}
+                setModalOpen={setModalOpen}
+                setSelectedDeal={setSelectedDeal}
+                onToggleFavorite={toggleFavorite}
+                onCategorySelect={handleCategorySelect}
+                onOpenChat={handleOpenChat}
+              />
+            </>
+          )}
+        </main>
+      </div>
     </div>
-  );
+  )
 }

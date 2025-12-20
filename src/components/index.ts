@@ -1,4 +1,4 @@
-export { Header } from './Header';
+export { Header } from './header';
 export { MetricsGrid } from './MetricsGrid';
 export { AlertsSection } from './AlertsSection';
 export { PrioritiesSection } from './PrioritiesSection';

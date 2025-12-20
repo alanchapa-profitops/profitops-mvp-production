@@ -18,7 +18,7 @@ interface ChatViewProps {
 }
 
 export function ChatView({ deals, onUpdateDeal, onCreateDeal, initialDealId, onDealSelect }: ChatViewProps) {
-  const [selectedDealId, setSelectedDealId] = useState<string | null>(initialDealId)
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(initialDealId ?? null)
   const [messages, setMessages] = useState<CoachMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [currentMessage, setCurrentMessage] = useState("")

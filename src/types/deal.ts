@@ -5,7 +5,7 @@ export interface Deal {
   company: string
   contactName?: string // Added contact fields for new deal creation
   contactEmail?: string
-  source?: "referido" | "cold-outreach" | "inbound" | "partner" | "evento" | "otro"
+  source?: "referido" | "cold-outreach" | "inbound" | "partner" | "evento" | "otro" | "pipedrive"
   imrValue: number
   tcvValue: number
   contractDurationMonths: number

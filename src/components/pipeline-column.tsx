@@ -15,8 +15,9 @@ export function PipelineColumn({ stage, deals, onToggleFavorite, onOpenChat }: P
   // Manejar tanto datos del frontend como datos reales de Pipedrive
   const getTotalValue = (deals: Deal[]) => {
     return deals.reduce((sum, deal) => {
-      // Intentar múltiples campos para el valor
-      const value = deal.imrValue || deal.value || deal.weighted_value || 0
+      // Usar imrValue como campo estándar
+      const dealAny = deal as unknown as Record<string, unknown>
+      const value = deal.imrValue || dealAny.value || dealAny.weighted_value || 0
       return sum + (typeof value === 'number' ? value : 0)
     }, 0)
   }

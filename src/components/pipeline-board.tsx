@@ -87,7 +87,7 @@ export function PipelineBoard({
     
     // Log de cada etapa
     Object.entries(pipedriveData.radar).forEach(([key, value]) => {
-      if (key in stageMapping) {
+      if (key in stageMapping && typeof value === 'object' && value !== null && 'total' in value) {
         console.log(`🎯 ${key}: ${value.total} deals, primeros 2:`, value.deals.slice(0, 2).map(d => `${d.org_name} ($${d.value_imr})`));
       }
     });

@@ -61,8 +61,8 @@ export class CoachService {
         const jsonResponse = JSON.parse(data);
         if (jsonResponse.content && Array.isArray(jsonResponse.content)) {
           cleanResponse = jsonResponse.content
-            .filter(item => item.type === 'text')
-            .map(item => item.text)
+            .filter((item: { type: string }) => item.type === 'text')
+            .map((item: { text: string }) => item.text)
             .join('');
         }
       } catch (e) {

@@ -1,5 +1,5 @@
 {
-  "name": "ProfitOps - Actualizar Pipedrive v1.2 Defensivo",
+  "name": "ProfitOps - Actualizar Pipedrive v1.3 Nodos Nativos",
   "nodes": [
     {
       "parameters": {
@@ -27,50 +27,31 @@
     },
     {
       "parameters": {
-        "url": "https://api.pipedrive.com/v1/deals/search",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "term",
-              "value": "={{ $json.deal_name }}"
-            },
-            {
-              "name": "fields",
-              "value": "title"
-            },
-            {
-              "name": "exact_match",
-              "value": "true"
-            },
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
+        "resource": "deal",
+        "operation": "search",
+        "term": "={{ $json.deal_name }}",
+        "fields": "title",
+        "exactMatch": true,
+        "options": {}
       },
       "id": "search-deal",
       "name": "Buscar Deal",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [650, 300]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {
         "conditions": {
           "boolean": [
             {
-              "value1": "={{ $json.data && $json.data.length > 0 }}",
+              "value1": "={{ $json && $json.id }}",
               "value2": true
             }
           ]
@@ -84,7 +65,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// CÓDIGO DEFENSIVO: Extraer deal de múltiples estructuras posibles\nconst searchResults = $input.all()[0].json;\nconst validatedData = $('Validar Entrada').all()[0].json;\n\nconsole.log('🔍 DEBUG - Search API Response Structure:');\nconsole.log(JSON.stringify(searchResults, null, 2));\n\nlet deal = null;\n\ntry {\n  if (searchResults.data) {\n    // Estructura 1: data es array directo → data[0]\n    if (Array.isArray(searchResults.data) && searchResults.data.length > 0) {\n      deal = searchResults.data[0];\n      console.log('✅ Estructura detectada: data[] directo');\n    }\n    // Estructura 2: data.items[].item → data.items[0].item (REAL API reportada)\n    else if (searchResults.data.items && Array.isArray(searchResults.data.items)) {\n      if (searchResults.data.items.length > 0) {\n        deal = searchResults.data.items[0].item || searchResults.data.items[0];\n        console.log('✅ Estructura detectada: data.items[].item o data.items[]');\n      }\n    }\n    // Estructura 3: data.item\n    else if (searchResults.data.item) {\n      deal = searchResults.data.item;\n      console.log('✅ Estructura detectada: data.item');\n    }\n    // Estructura 4: data es objeto único (no array)\n    else if (searchResults.data.id) {\n      deal = searchResults.data;\n      console.log('✅ Estructura detectada: data como objeto único');\n    }\n  }\n} catch (error) {\n  console.error('❌ Error procesando estructura:', error);\n}\n\n// Validar que tenemos un deal válido\nif (!deal || !deal.id) {\n  console.error('❌ ESTRUCTURA NO RECONOCIDA:');\n  console.error(JSON.stringify(searchResults, null, 2));\n  throw new Error(`Deal \"${validatedData.deal_name}\" no encontrado en Pipedrive. Estructura de respuesta no reconocida.`);\n}\n\nconsole.log('✅ Deal extraído exitosamente:', {\n  id: deal.id,\n  title: deal.title || deal.name || 'Sin título'\n});\n\nreturn [{\n  json: {\n    deal_id: deal.id,\n    deal_title: deal.title || deal.name || validatedData.deal_name,\n    ...validatedData\n  }\n}];"
+        "jsCode": "// CÓDIGO DEFENSIVO: Extraer deal de nodo Pipedrive nativo\n// NOTA: Los nodos nativos de Pipedrive devuelven el deal directamente en $json\nconst searchResults = $input.all()[0].json;\nconst validatedData = $('Validar Entrada').all()[0].json;\n\nconsole.log('🔍 DEBUG - Pipedrive Native Node Response:');\nconsole.log(JSON.stringify(searchResults, null, 2));\n\nlet deal = null;\n\ntry {\n  // Nodo nativo: El deal viene directamente en $json\n  if (searchResults.id) {\n    deal = searchResults;\n    console.log('✅ Deal obtenido de nodo nativo Pipedrive');\n  }\n  // Fallback: por si acaso tiene estructura data\n  else if (searchResults.data && Array.isArray(searchResults.data) && searchResults.data.length > 0) {\n    deal = searchResults.data[0];\n    console.log('✅ Estructura detectada: data[] (fallback)');\n  }\n  else if (searchResults.data && searchResults.data.items && Array.isArray(searchResults.data.items)) {\n    if (searchResults.data.items.length > 0) {\n      deal = searchResults.data.items[0].item || searchResults.data.items[0];\n      console.log('✅ Estructura detectada: data.items[].item (fallback)');\n    }\n  }\n} catch (error) {\n  console.error('❌ Error procesando estructura:', error);\n}\n\n// Validar que tenemos un deal válido\nif (!deal || !deal.id) {\n  console.error('❌ ESTRUCTURA NO RECONOCIDA O DEAL NO ENCONTRADO:');\n  console.error(JSON.stringify(searchResults, null, 2));\n  throw new Error(`Deal \"${validatedData.deal_name}\" no encontrado en Pipedrive.`);\n}\n\nconsole.log('✅ Deal extraído exitosamente:', {\n  id: deal.id,\n  title: deal.title || deal.name || 'Sin título'\n});\n\nreturn [{\n  json: {\n    deal_id: deal.id,\n    deal_title: deal.title || deal.name || validatedData.deal_name,\n    ...validatedData\n  }\n}];"
       },
       "id": "extract-deal-id",
       "name": "Extraer Deal ID",
@@ -94,35 +75,27 @@
     },
     {
       "parameters": {
-        "url": "https://api.pipedrive.com/v1/deals/{{ $json.deal_id }}/products",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
+        "resource": "product",
+        "operation": "getAll",
+        "dealId": "={{ $json.deal_id }}",
+        "returnAll": true,
+        "options": {}
       },
       "id": "get-products",
       "name": "Obtener Productos",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1250, 200]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [1250, 200],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// CÓDIGO DEFENSIVO: Verificar productos de manera defensiva\nconst response = $json;\n\nconsole.log('🔍 DEBUG - Get Products Response:', JSON.stringify(response, null, 2));\n\nlet hasProducts = false;\n\nif (response.data) {\n  if (Array.isArray(response.data)) {\n    hasProducts = response.data.length > 0;\n    console.log(`📊 Productos encontrados (array): ${response.data.length}`);\n  } else if (typeof response.data === 'object') {\n    // Puede ser un objeto con productos dentro\n    if (response.data.products && Array.isArray(response.data.products)) {\n      hasProducts = response.data.products.length > 0;\n      console.log(`📊 Productos encontrados (nested): ${response.data.products.length}`);\n    } else if (Object.keys(response.data).length > 0) {\n      hasProducts = true;\n      console.log('📊 Productos encontrados (objeto)');\n    }\n  }\n}\n\nconsole.log(`✅ Tiene productos: ${hasProducts}`);\n\nreturn [{ json: { ...response, hasProducts } }];"
+        "jsCode": "// CÓDIGO DEFENSIVO: Verificar productos de nodo nativo\n// NOTA: Nodo nativo Pipedrive devuelve array de productos directamente\nconst allItems = $input.all();\n\nconsole.log('🔍 DEBUG - Get Products Response (nodo nativo):');\nconsole.log('Total items recibidos:', allItems.length);\n\nlet hasProducts = false;\n\nif (allItems && allItems.length > 0) {\n  // El nodo nativo con returnAll devuelve múltiples items\n  hasProducts = true;\n  console.log(`📊 Productos encontrados: ${allItems.length}`);\n} else {\n  console.log('📊 No se encontraron productos');\n}\n\nconsole.log(`✅ Tiene productos: ${hasProducts}`);\n\n// Retornar el primer producto con flag hasProducts\nif (hasProducts) {\n  return [{ json: { ...allItems[0].json, hasProducts: true } }];\n} else {\n  return [{ json: { hasProducts: false } }];\n}"
       },
       "id": "verify-products",
       "name": "Verificar Productos",
@@ -149,7 +122,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// CÓDIGO DEFENSIVO: Extraer product ID de manera defensiva\nconst productsResponse = $json;\nconst dealData = $('Extraer Deal ID').first().json;\n\nconsole.log('🔍 DEBUG - Extracting Product ID from:', JSON.stringify(productsResponse, null, 2));\n\nlet productId = null;\nconst productsData = productsResponse.data;\n\nif (Array.isArray(productsData) && productsData.length > 0) {\n  productId = productsData[0].id;\n  console.log('✅ Product ID extraído de array:', productId);\n} else if (productsData?.products && Array.isArray(productsData.products)) {\n  productId = productsData.products[0].id;\n  console.log('✅ Product ID extraído de nested products:', productId);\n} else if (productsData?.id) {\n  productId = productsData.id;\n  console.log('✅ Product ID extraído de objeto:', productId);\n}\n\nif (!productId) {\n  console.error('❌ No se pudo extraer product ID');\n  console.error('Estructura recibida:', JSON.stringify(productsResponse, null, 2));\n  throw new Error('Product ID not found in response');\n}\n\nconsole.log('✅ Product ID listo para actualizar:', productId);\n\nreturn [{\n  json: {\n    product_id: productId,\n    ...dealData\n  }\n}];"
+        "jsCode": "// CÓDIGO DEFENSIVO: Extraer product ID de nodo nativo\nconst productData = $json;\nconst dealData = $('Extraer Deal ID').first().json;\n\nconsole.log('🔍 DEBUG - Extracting Product ID from native node:');\nconsole.log(JSON.stringify(productData, null, 2));\n\nlet productId = null;\n\n// Nodo nativo: el ID viene directamente en $json.id\nif (productData.id) {\n  productId = productData.id;\n  console.log('✅ Product ID extraído de nodo nativo:', productId);\n} else {\n  console.error('❌ No se pudo extraer product ID');\n  console.error('Estructura recibida:', JSON.stringify(productData, null, 2));\n  throw new Error('Product ID not found in response');\n}\n\nconsole.log('✅ Product ID listo para actualizar:', productId);\n\nreturn [{\n  json: {\n    product_id: productId,\n    ...dealData\n  }\n}];"
       },
       "id": "extract-product-id",
       "name": "Extraer Product ID",
@@ -159,91 +132,48 @@
     },
     {
       "parameters": {
-        "method": "PUT",
-        "url": "https://api.pipedrive.com/v1/deals/{{ $json.deal_id }}/products/{{ $json.product_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "item_price",
-              "value": "={{ $json.mrr }}"
-            },
-            {
-              "name": "quantity",
-              "value": "1"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+        "resource": "product",
+        "operation": "update",
+        "productId": "={{ $json.product_id }}",
+        "updateFields": {
+          "itemPrice": "={{ $json.mrr }}",
+          "quantity": 1
         }
       },
       "id": "update-product",
       "name": "Actualizar Producto",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [2050, 100]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [2050, 100],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {
-        "method": "PUT",
-        "url": "https://api.pipedrive.com/v1/deals/{{ $('Extraer Deal ID').first().json.deal_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "value",
-              "value": "={{ $('Extraer Deal ID').first().json.mrr }}"
-            },
-            {
-              "name": "probability",
-              "value": "={{ $('Extraer Deal ID').first().json.probabilidad }}"
-            },
-            {
-              "name": "expected_close_date",
-              "value": "={{ $('Extraer Deal ID').first().json.fecha_cierre }}"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+        "resource": "deal",
+        "operation": "update",
+        "dealId": "={{ $('Extraer Deal ID').first().json.deal_id }}",
+        "updateFields": {
+          "value": "={{ $('Extraer Deal ID').first().json.mrr }}",
+          "probability": "={{ $('Extraer Deal ID').first().json.probabilidad }}",
+          "expectedCloseDate": "={{ $('Extraer Deal ID').first().json.fecha_cierre }}"
         }
       },
       "id": "update-deal-direct",
       "name": "Actualizar Deal Directo",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1850, 300]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [1850, 300],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -274,41 +204,24 @@
     },
     {
       "parameters": {
-        "method": "PUT",
-        "url": "https://api.pipedrive.com/v1/deals/{{ $('Extraer Deal ID').first().json.deal_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "stage_id",
-              "value": "={{ $('Extraer Deal ID').first().json.stage_mapping[$('Extraer Deal ID').first().json.stage_id.toString()] }}"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+        "resource": "deal",
+        "operation": "update",
+        "dealId": "={{ $('Extraer Deal ID').first().json.deal_id }}",
+        "updateFields": {
+          "stageId": "={{ $('Extraer Deal ID').first().json.stage_mapping[$('Extraer Deal ID').first().json.stage_id.toString()] }}"
         }
       },
       "id": "update-stage",
       "name": "Actualizar Etapa",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [2650, 100]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [2650, 100],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {},
@@ -337,49 +250,25 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.pipedrive.com/v1/notes",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "deal_id",
-              "value": "={{ $('Extraer Deal ID').first().json.deal_id }}"
-            },
-            {
-              "name": "content",
-              "value": "={{ $('Extraer Deal ID').first().json.nota }}"
-            },
-            {
-              "name": "pinned_to_deal_flag",
-              "value": "1"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+        "resource": "note",
+        "operation": "create",
+        "content": "={{ $('Extraer Deal ID').first().json.nota }}",
+        "additionalFields": {
+          "dealId": "={{ $('Extraer Deal ID').first().json.deal_id }}",
+          "pinnedToDealFlag": true
         }
       },
       "id": "create-note",
       "name": "Crear Nota",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [3250, 100]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [3250, 100],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {},
@@ -418,57 +307,27 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.pipedrive.com/v1/activities",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "deal_id",
-              "value": "={{ $json.deal_id }}"
-            },
-            {
-              "name": "subject",
-              "value": "={{ $json.activity_subject }}"
-            },
-            {
-              "name": "type",
-              "value": "={{ $json.activity_type }}"
-            },
-            {
-              "name": "due_date",
-              "value": "={{ $json.activity_due_date }}"
-            },
-            {
-              "name": "due_time",
-              "value": "09:00"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+        "resource": "activity",
+        "operation": "create",
+        "subject": "={{ $json.activity_subject }}",
+        "type": "={{ $json.activity_type }}",
+        "dueDate": "={{ $json.activity_due_date }}",
+        "additionalFields": {
+          "dealId": "={{ $json.deal_id }}",
+          "dueTime": "09:00"
         }
       },
       "id": "create-activity",
       "name": "Crear Actividad en Pipedrive",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [4050, 100]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [4050, 100],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {},
@@ -497,38 +356,25 @@
     },
     {
       "parameters": {
-        "url": "https://api.pipedrive.com/v1/deals/{{ $('Extraer Deal ID').first().json.deal_id }}/activities",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            },
-            {
-              "name": "done",
-              "value": "0"
-            }
-          ]
-        },
-        "options": {
-          "splitIntoItems": true,
-          "response": {
-            "response": {
-              "fullResponse": false,
-              "responseFormat": "json",
-              "neverError": true
-            }
-          }
+        "resource": "activity",
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "dealId": "={{ $('Extraer Deal ID').first().json.deal_id }}",
+          "done": "0"
         }
       },
       "id": "get-pending-activities",
       "name": "Obtener Actividades Pendientes",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [4650, 100]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [4650, 100],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -543,41 +389,24 @@
     },
     {
       "parameters": {
-        "method": "PUT",
-        "url": "https://api.pipedrive.com/v1/activities/{{ $json.id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "queryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "api_token",
-              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "done",
-              "value": "1"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+        "resource": "activity",
+        "operation": "update",
+        "activityId": "={{ $json.id }}",
+        "updateFields": {
+          "done": "1"
         }
       },
       "id": "complete-activity",
       "name": "Completar Actividad",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [5050, 100]
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
+      "position": [5050, 100],
+      "credentials": {
+        "pipedriveApi": {
+          "id": "pipedrive-account-2",
+          "name": "Pipedrive account 2"
+        }
+      }
     },
     {
       "parameters": {},
@@ -1012,6 +841,6 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2025-01-08T00:00:00.000Z",
-  "versionId": "1.2"
+  "updatedAt": "2025-01-08T12:00:00.000Z",
+  "versionId": "1.3"
 }

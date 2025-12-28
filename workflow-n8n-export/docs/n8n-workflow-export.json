@@ -1,0 +1,927 @@
+{
+  "name": "ProfitOps - Actualizar Pipedrive",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "7f477b94-4cb6-4f41-938a-5e987e7f1254",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Recibir Actualización",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "7f477b94-4cb6-4f41-938a-5e987e7f1254"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar y estructurar datos de entrada\nconst input = $input.all()[0].json;\n\n// Extraer datos con valores por defecto\nconst dealName = input.deal || input.body?.deal;\nconst updates = input.updates || input.body?.updates || {};\nconst actividad = input.actividad || input.body?.actividad;\nconst completarActividad = input.completar_actividad || input.body?.completar_actividad || false;\n\n// Validación básica\nif (!dealName) {\n  throw new Error('El campo \"deal\" es obligatorio');\n}\n\n// Preparar datos validados\nconst validated = {\n  deal_name: dealName,\n  mrr: updates.mrr || null,\n  stage_id: updates.stage_id || null,\n  probabilidad: updates.probabilidad || null,\n  fecha_cierre: updates.fecha_cierre || null,\n  nota: updates.nota || null,\n  actividad: actividad || null,\n  completar_actividad: completarActividad,\n  // Mapeo de etapas\n  stage_mapping: {\n    \"1\": 104, \"2\": 22, \"3\": 23, \"4\": 24, \"5\": 25, \"6\": 26\n  }\n};\n\nreturn [validated];"
+      },
+      "id": "validate-input",
+      "name": "Validar Entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.pipedrive.com/v1/deals/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "term",
+              "value": "={{ $json.deal_name }}"
+            },
+            {
+              "name": "fields",
+              "value": "title"
+            },
+            {
+              "name": "exact_match",
+              "value": "true"
+            },
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            }
+          ]
+        },
+        "options": {
+          "splitIntoItems": true
+        }
+      },
+      "id": "search-deal",
+      "name": "Buscar Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.data && $json.data.length > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-deal-exists",
+      "name": "Deal Encontrado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer el primer resultado\nconst searchResults = $input.all()[0].json;\nconst validatedData = $('Validar Entrada').all()[0].json;\n\nif (!searchResults.data || searchResults.data.length === 0) {\n  throw new Error(`Deal \"${validatedData.deal_name}\" no encontrado en Pipedrive`);\n}\n\nconst deal = searchResults.data[0].item;\n\nreturn [{\n  json: {\n    deal_id: deal.id,\n    deal_title: deal.title,\n    ...validatedData\n  }\n}];"
+      },
+      "id": "extract-deal-id",
+      "name": "Extraer Deal ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://api.pipedrive.com/v1/deals/{{ $json.deal_id }}/products",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            }
+          ]
+        }
+      },
+      "id": "get-products",
+      "name": "Obtener Productos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.data && $json.data.length > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-has-products",
+      "name": "Tiene Productos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.pipedrive.com/v1/deals/{{ $('Extraer Deal ID').first().json.deal_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "value",
+              "value": "={{ $('Extraer Deal ID').first().json.mrr }}"
+            },
+            {
+              "name": "probability",
+              "value": "={{ $('Extraer Deal ID').first().json.probabilidad }}"
+            },
+            {
+              "name": "expected_close_date",
+              "value": "={{ $('Extraer Deal ID').first().json.fecha_cierre }}"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {}
+          }
+        }
+      },
+      "id": "update-deal-direct",
+      "name": "Actualizar Deal Directo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.pipedrive.com/v1/deals/{{ $('Extraer Deal ID').first().json.deal_id }}/products/{{ $json.data[0].id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "item_price",
+              "value": "={{ $('Extraer Deal ID').first().json.mrr }}"
+            },
+            {
+              "name": "quantity",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "id": "update-product",
+      "name": "Actualizar Producto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 100]
+    },
+    {
+      "parameters": {
+        "mode": "mergeByPosition"
+      },
+      "id": "merge-updates",
+      "name": "Merge Actualización",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1850, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Extraer Deal ID').first().json.stage_id !== null }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-update-stage",
+      "name": "Cambiar Etapa?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2050, 200]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.pipedrive.com/v1/deals/{{ $('Extraer Deal ID').first().json.deal_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "stage_id",
+              "value": "={{ $('Extraer Deal ID').first().json.stage_mapping[$('Extraer Deal ID').first().json.stage_id.toString()] }}"
+            }
+          ]
+        }
+      },
+      "id": "update-stage",
+      "name": "Actualizar Etapa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2250, 100]
+    },
+    {
+      "parameters": {},
+      "id": "merge-stage",
+      "name": "Merge Etapa",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [2450, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Extraer Deal ID').first().json.nota !== null && $('Extraer Deal ID').first().json.nota !== '' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-add-note",
+      "name": "Agregar Nota?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2650, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pipedrive.com/v1/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "deal_id",
+              "value": "={{ $('Extraer Deal ID').first().json.deal_id }}"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('Extraer Deal ID').first().json.nota }}"
+            },
+            {
+              "name": "pinned_to_deal_flag",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "id": "create-note",
+      "name": "Crear Nota",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2850, 100]
+    },
+    {
+      "parameters": {},
+      "id": "merge-note",
+      "name": "Merge Nota",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [3050, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Extraer Deal ID').first().json.actividad !== null }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-create-activity",
+      "name": "Crear Actividad?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [3250, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mapear tipos de actividad\nconst activityTypes = {\n  \"call\": \"call\",\n  \"meeting\": \"meeting\",\n  \"task\": \"task\",\n  \"deadline\": \"deadline\",\n  \"email\": \"email\",\n  \"lunch\": \"lunch\"\n};\n\nconst dealData = $('Extraer Deal ID').first().json;\nconst actividad = dealData.actividad;\nconst activityType = activityTypes[actividad.tipo] || \"task\";\n\nreturn [{\n  json: {\n    ...dealData,\n    activity_subject: actividad.titulo,\n    activity_type: activityType,\n    activity_due_date: actividad.fecha\n  }\n}];"
+      },
+      "id": "prepare-activity",
+      "name": "Preparar Actividad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3450, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pipedrive.com/v1/activities",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "deal_id",
+              "value": "={{ $json.deal_id }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.activity_subject }}"
+            },
+            {
+              "name": "type",
+              "value": "={{ $json.activity_type }}"
+            },
+            {
+              "name": "due_date",
+              "value": "={{ $json.activity_due_date }}"
+            },
+            {
+              "name": "due_time",
+              "value": "09:00"
+            }
+          ]
+        }
+      },
+      "id": "create-activity",
+      "name": "Crear Actividad en Pipedrive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [3650, 100]
+    },
+    {
+      "parameters": {},
+      "id": "merge-activity",
+      "name": "Merge Actividad",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [3850, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Extraer Deal ID').first().json.completar_actividad === true }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-complete-activities",
+      "name": "Completar Actividades?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [4050, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://api.pipedrive.com/v1/deals/{{ $('Extraer Deal ID').first().json.deal_id }}/activities",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            },
+            {
+              "name": "done",
+              "value": "0"
+            }
+          ]
+        },
+        "options": {
+          "splitIntoItems": true,
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "get-pending-activities",
+      "name": "Obtener Actividades Pendientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [4250, 100]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-activities",
+      "name": "Loop Actividades",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [4450, 100]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.pipedrive.com/v1/activities/{{ $json.data.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "queryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_token",
+              "value": "6875ccdf045b5c77ffaf0e442ed393c6d492bbcc"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "done",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "id": "complete-activity",
+      "name": "Completar Actividad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [4650, 100]
+    },
+    {
+      "parameters": {},
+      "id": "merge-complete",
+      "name": "Merge Completar",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [4850, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const deal = $('Extraer Deal ID').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    message: \"Deal actualizado exitosamente\",\n    deal: {\n      id: deal.deal_id,\n      title: deal.deal_title,\n      actualizaciones_aplicadas: {\n        mrr: deal.mrr !== null,\n        etapa: deal.stage_id !== null,\n        probabilidad: deal.probabilidad !== null,\n        fecha_cierre: deal.fecha_cierre !== null,\n        nota_agregada: deal.nota !== null,\n        actividad_creada: deal.actividad !== null,\n        actividades_completadas: deal.completar_actividad\n      }\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "final-response",
+      "name": "Respuesta Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5050, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-webhook",
+      "name": "Responder Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [5250, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    error: \"Deal no encontrado\",\n    message: \"No se encontró ningún deal con ese nombre en Pipedrive\",\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "error-deal-not-found",
+      "name": "Error - Deal No Encontrado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-error",
+      "name": "Responder Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    }
+  ],
+  "connections": {
+    "Recibir Actualización": {
+      "main": [
+        [
+          {
+            "node": "Validar Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Entrada": {
+      "main": [
+        [
+          {
+            "node": "Buscar Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Deal": {
+      "main": [
+        [
+          {
+            "node": "Deal Encontrado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deal Encontrado?": {
+      "main": [
+        [
+          {
+            "node": "Extraer Deal ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error - Deal No Encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Deal ID": {
+      "main": [
+        [
+          {
+            "node": "Obtener Productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Productos": {
+      "main": [
+        [
+          {
+            "node": "Tiene Productos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tiene Productos?": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Producto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Actualizar Deal Directo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Deal Directo": {
+      "main": [
+        [
+          {
+            "node": "Merge Actualización",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Actualizar Producto": {
+      "main": [
+        [
+          {
+            "node": "Merge Actualización",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Actualización": {
+      "main": [
+        [
+          {
+            "node": "Cambiar Etapa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cambiar Etapa?": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Etapa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Etapa",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Actualizar Etapa": {
+      "main": [
+        [
+          {
+            "node": "Merge Etapa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Etapa": {
+      "main": [
+        [
+          {
+            "node": "Agregar Nota?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar Nota?": {
+      "main": [
+        [
+          {
+            "node": "Crear Nota",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Nota",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Crear Nota": {
+      "main": [
+        [
+          {
+            "node": "Merge Nota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Nota": {
+      "main": [
+        [
+          {
+            "node": "Crear Actividad?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Actividad?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Actividad",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Actividad",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Preparar Actividad": {
+      "main": [
+        [
+          {
+            "node": "Crear Actividad en Pipedrive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Actividad en Pipedrive": {
+      "main": [
+        [
+          {
+            "node": "Merge Actividad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Actividad": {
+      "main": [
+        [
+          {
+            "node": "Completar Actividades?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completar Actividades?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Actividades Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Completar",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Obtener Actividades Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Loop Actividades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Actividades": {
+      "main": [
+        [
+          {
+            "node": "Completar Actividad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completar Actividad": {
+      "main": [
+        [
+          {
+            "node": "Loop Actividades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Actividades": {
+      "main": [
+        null,
+        [
+          {
+            "node": "Merge Completar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Completar": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Final": {
+      "main": [
+        [
+          {
+            "node": "Responder Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error - Deal No Encontrado": {
+      "main": [
+        [
+          {
+            "node": "Responder Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-08T00:00:00.000Z",
+  "versionId": "1"
+}

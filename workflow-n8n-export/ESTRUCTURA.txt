@@ -1,0 +1,116 @@
+📁 profitops-n8n-workflow/
+│
+├── 📄 README.md
+│   └── Índice principal y guía rápida de uso
+│
+├── 📁 docs/
+│   │
+│   ├── 📄 n8n-workflow-export.json
+│   │   └── Archivo JSON listo para importar en n8n (27 nodos)
+│   │       ⚡ EMPIEZA AQUÍ: Importa este archivo en n8n
+│   │
+│   ├── 📄 n8n-quick-start-guide.md
+│   │   └── Guía rápida de implementación (10 minutos)
+│   │       • Pasos para importar
+│   │       • Ejemplos de testing
+│   │       • Troubleshooting
+│   │       • Checklist pre-demo
+│   │
+│   └── 📄 n8n-pipedrive-update-workflow.md
+│       └── Documentación técnica completa
+│           • Arquitectura detallada
+│           • Configuración de cada nodo
+│           • Código JavaScript completo
+│
+├── 📁 src/lib/
+│   │
+│   └── 📄 pipedrive-update-service.ts
+│       └── Servicio TypeScript para el frontend React
+│           • Interfaces completas
+│           • Métodos helper
+│           • Validación de datos
+│           • Ejemplos de uso
+│
+└── 📄 test-examples.sh
+    └── Script de testing con 6 casos de prueba
+        • Test de actualizar MRR
+        • Test de cambiar etapa
+        • Test de agregar nota
+        • Test de crear actividad
+        • Test completo
+        • Test de error controlado
+
+════════════════════════════════════════════════════════════
+
+🚀 QUICK START - 3 PASOS:
+
+1️⃣  IMPORTAR
+    • Abre: docs/n8n-workflow-export.json
+    • Ve a n8n → Import from File
+    • Selecciona el archivo JSON
+
+2️⃣  ACTIVAR
+    • Toggle "Active" en verde ✅
+
+3️⃣  PROBAR
+    • Ejecuta: ./test-examples.sh
+    • O sigue los ejemplos en el README.md
+
+════════════════════════════════════════════════════════════
+
+📊 DATOS IMPORTANTES:
+
+Webhook URL:
+https://profitops.app.n8n.cloud/webhook/7f477b94-4cb6-4f41-938a-5e987e7f1254
+
+Deal de Prueba:
+"Datatechnic México" (ID: 958)
+
+Mapeo de Etapas:
+1 → 104 (Prospección)
+2 → 22  (Discovery)
+3 → 23  (Propuesta)
+4 → 24  (Negociación)
+5 → 25  (Cierre)
+6 → 26  (Ganado/Perdido)
+
+════════════════════════════════════════════════════════════
+
+📖 ORDEN DE LECTURA RECOMENDADO:
+
+Para Demo Rápido:
+1. README.md (este archivo)
+2. docs/n8n-quick-start-guide.md
+3. Importar docs/n8n-workflow-export.json
+
+Para Integración Frontend:
+1. src/lib/pipedrive-update-service.ts
+2. Copiar a tu proyecto
+3. Importar y usar los métodos
+
+Para Entender Todo:
+1. README.md
+2. docs/n8n-quick-start-guide.md
+3. docs/n8n-pipedrive-update-workflow.md
+4. Analizar docs/n8n-workflow-export.json
+
+════════════════════════════════════════════════════════════
+
+✅ CHECKLIST PRE-DEMO BLK:
+
+□ Workflow importado en n8n
+□ Workflow activado (verde)
+□ Probado con curl/test-examples.sh
+□ Deal 958 existe en Pipedrive
+□ API token válido
+□ Servicio TypeScript integrado
+□ Todos los casos de uso probados
+
+════════════════════════════════════════════════════════════
+
+🎯 LISTO PARA EL DEMO!
+
+Todo está configurado, documentado y listo para usar.
+El workflow es robusto, profesional y no fallará.
+
+¡Buena suerte con BLK! 🚀

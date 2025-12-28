@@ -1,0 +1,262 @@
+╔══════════════════════════════════════════════════════════╗
+║     🚀 PROFITOPS - WORKFLOW N8N PIPEDRIVE               ║
+║     GUÍA DE INICIO RÁPIDO - 5 MINUTOS                  ║
+╚══════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════
+PASO 1: IMPORTAR EL WORKFLOW EN N8N
+═══════════════════════════════════════════════════════════
+
+1. Abre el archivo:
+   📄 docs/n8n-workflow-export.json
+
+2. Copia TODO el contenido (Cmd+A, Cmd+C)
+
+3. Ve a: https://profitops.app.n8n.cloud
+
+4. Click: "Add workflow" → "Import from File"
+
+5. Pega el contenido o selecciona el archivo
+
+6. Click: "Import"
+
+✅ ¡Workflow importado con 27 nodos!
+
+
+═══════════════════════════════════════════════════════════
+PASO 2: ACTIVAR EL WORKFLOW
+═══════════════════════════════════════════════════════════
+
+1. En n8n, busca el toggle "Active" (esquina superior derecha)
+
+2. Click para activarlo
+
+3. Debe quedar en VERDE ✅
+
+✅ ¡Workflow activado y listo para recibir requests!
+
+
+═══════════════════════════════════════════════════════════
+PASO 3: PROBAR EL WORKFLOW
+═══════════════════════════════════════════════════════════
+
+Opción A - Desde Terminal (Mac):
+----------------------------------
+
+Abre Terminal y ejecuta:
+
+curl -X POST https://profitops.app.n8n.cloud/webhook/7f477b94-4cb6-4f41-938a-5e987e7f1254 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deal": "Datatechnic México",
+    "updates": {
+      "mrr": 40000
+    }
+  }'
+
+
+Opción B - Usar el Script de Testing:
+--------------------------------------
+
+cd ~/Desktop/profitops-n8n-workflow
+./test-examples.sh
+
+
+Opción C - Desde Postman:
+--------------------------
+
+POST: https://profitops.app.n8n.cloud/webhook/7f477b94-4cb6-4f41-938a-5e987e7f1254
+
+Headers:
+  Content-Type: application/json
+
+Body (JSON):
+{
+  "deal": "Datatechnic México",
+  "updates": {
+    "mrr": 40000,
+    "stage_id": 4,
+    "probabilidad": 75
+  }
+}
+
+
+═══════════════════════════════════════════════════════════
+RESPUESTA ESPERADA
+═══════════════════════════════════════════════════════════
+
+{
+  "success": true,
+  "message": "Deal actualizado exitosamente",
+  "deal": {
+    "id": 958,
+    "title": "Datatechnic México",
+    "actualizaciones_aplicadas": {
+      "mrr": true,
+      "etapa": true,
+      "probabilidad": true,
+      "fecha_cierre": false,
+      "nota_agregada": false,
+      "actividad_creada": false,
+      "actividades_completadas": false
+    }
+  },
+  "timestamp": "2025-01-08T22:30:00.000Z"
+}
+
+
+═══════════════════════════════════════════════════════════
+PASO 4: INTEGRAR CON FRONTEND (OPCIONAL)
+═══════════════════════════════════════════════════════════
+
+1. Copia el servicio TypeScript:
+
+   cp src/lib/pipedrive-update-service.ts /ruta/a/tu/proyecto/src/lib/
+
+2. Importa en tu código:
+
+   import { PipedriveUpdateService } from '@/lib/pipedrive-update-service';
+
+3. Úsalo:
+
+   await PipedriveUpdateService.updateMRR("Datatechnic México", 40000);
+   await PipedriveUpdateService.updateStage("Datatechnic México", 4);
+
+
+═══════════════════════════════════════════════════════════
+CASOS DE USO PARA EL DEMO
+═══════════════════════════════════════════════════════════
+
+🎯 CASO 1: Actualizar Valor del Deal
+{
+  "deal": "Datatechnic México",
+  "updates": { "mrr": 40000 }
+}
+
+🎯 CASO 2: Cambiar Etapa + Nota
+{
+  "deal": "Datatechnic México",
+  "updates": {
+    "stage_id": 4,
+    "nota": "Cliente confirmó interés. Enviar propuesta."
+  }
+}
+
+🎯 CASO 3: Crear Actividad de Seguimiento
+{
+  "deal": "Datatechnic México",
+  "actividad": {
+    "titulo": "Llamada de seguimiento",
+    "tipo": "call",
+    "fecha": "2025-01-15"
+  }
+}
+
+🎯 CASO 4: Actualización Completa
+{
+  "deal": "Datatechnic México",
+  "updates": {
+    "mrr": 45000,
+    "stage_id": 4,
+    "probabilidad": 75,
+    "fecha_cierre": "2025-02-15",
+    "nota": "Negociación avanzada"
+  },
+  "actividad": {
+    "titulo": "Reunión de cierre",
+    "tipo": "meeting",
+    "fecha": "2025-02-01"
+  },
+  "completar_actividad": true
+}
+
+
+═══════════════════════════════════════════════════════════
+MAPEO DE ETAPAS
+═══════════════════════════════════════════════════════════
+
+stage_id: 1  →  104  (Prospección)
+stage_id: 2  →  22   (Discovery)
+stage_id: 3  →  23   (Propuesta)
+stage_id: 4  →  24   (Negociación)
+stage_id: 5  →  25   (Cierre)
+stage_id: 6  →  26   (Ganado/Perdido)
+
+
+═══════════════════════════════════════════════════════════
+TIPOS DE ACTIVIDAD VÁLIDOS
+═══════════════════════════════════════════════════════════
+
+• call      → Llamada
+• meeting   → Reunión
+• task      → Tarea
+• email     → Email
+• deadline  → Fecha límite
+• lunch     → Comida
+
+
+═══════════════════════════════════════════════════════════
+TROUBLESHOOTING RÁPIDO
+═══════════════════════════════════════════════════════════
+
+❌ Error: "Deal no encontrado"
+   → Verifica el nombre exacto en Pipedrive
+   → Respeta mayúsculas/minúsculas
+
+❌ Error: HTTP 401 Unauthorized
+   → Verifica el API token de Pipedrive en los nodos HTTP Request
+
+❌ Workflow no responde
+   → Verifica que esté ACTIVADO (toggle verde)
+   → Revisa logs en n8n → Executions
+
+❌ Actividad no se crea
+   → Usa solo tipos válidos: call, meeting, task, email, deadline, lunch
+
+
+═══════════════════════════════════════════════════════════
+CHECKLIST PRE-DEMO BLK
+═══════════════════════════════════════════════════════════
+
+□ Workflow importado ✓
+□ Workflow activado (verde) ✓
+□ Probado con curl ✓
+□ Probado con Postman ✓
+□ Deal "Datatechnic México" existe en Pipedrive ✓
+□ Casos de uso preparados ✓
+□ Frontend integrado (opcional) ✓
+
+
+═══════════════════════════════════════════════════════════
+DOCUMENTACIÓN ADICIONAL
+═══════════════════════════════════════════════════════════
+
+📖 README.md
+   → Índice general y overview
+
+📖 docs/n8n-quick-start-guide.md
+   → Guía detallada de implementación y troubleshooting
+
+📖 docs/n8n-pipedrive-update-workflow.md
+   → Documentación técnica completa de los 27 nodos
+
+📖 ESTRUCTURA.txt
+   → Vista visual de todos los archivos
+
+
+═══════════════════════════════════════════════════════════
+🎯 ¡LISTO PARA EL DEMO!
+═══════════════════════════════════════════════════════════
+
+El workflow es robusto, profesional y está diseñado para no fallar.
+
+Características:
+✅ Funciona con y sin productos
+✅ Manejo de errores robusto
+✅ Validación de datos
+✅ Logging completo
+✅ 7 casos de uso soportados
+
+¡Buena suerte con el demo de BLK! 🚀
+
+═══════════════════════════════════════════════════════════

@@ -147,3 +147,117 @@ body {
 .typing-dot:nth-child(1) { animation-delay: 0s; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Gradient Border Effect */
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--accent-gradient);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.gradient-border:hover::before {
+  opacity: 1;
+}
+
+/* Category Colors for Deal Cards */
+.category-critico {
+  --category-color: var(--alert-yellow);
+  --category-bg: rgba(245, 158, 11, 0.1);
+}
+
+.category-reactivar {
+  --category-color: var(--alert-red);
+  --category-bg: rgba(239, 68, 68, 0.1);
+}
+
+.category-momentum {
+  --category-color: var(--alert-green);
+  --category-bg: rgba(16, 185, 129, 0.1);
+}
+
+/* Gradient Button */
+.gradient-button {
+  background: var(--accent-gradient);
+  color: var(--bg-primary);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.gradient-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gradient-button:hover {
+  box-shadow: 0 0 30px rgba(0, 212, 170, 0.4);
+  transform: translateY(-1px);
+}
+
+.gradient-button:hover::before {
+  opacity: 1;
+}
+
+/* Glass Effect */
+.glass {
+  background: rgba(30, 45, 74, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 63, 95, 0.5);
+}
+
+/* Nav Pill Active */
+.nav-pill-active {
+  background: var(--accent-gradient);
+  color: var(--bg-primary);
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+}
+
+/* Notification Dot */
+.notification-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: var(--alert-red);
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+  animation: pulse 2s infinite;
+}
+
+/* Avatar Ring */
+.avatar-ring {
+  background: var(--accent-gradient);
+  padding: 2px;
+  border-radius: 50%;
+}
+
+/* Card Lift Effect */
+.card-lift {
+  transition: all 0.3s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), var(--shadow-glow);
+}

@@ -80,7 +80,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extraer el primer resultado\nconst searchResults = $input.all()[0].json;\nconst validatedData = $('Validar Entrada').all()[0].json;\n\nif (!searchResults.data || searchResults.data.length === 0) {\n  throw new Error(`Deal \"${validatedData.deal_name}\" no encontrado en Pipedrive`);\n}\n\nconst deal = searchResults.data[0].item;\n\nreturn [{\n  json: {\n    deal_id: deal.id,\n    deal_title: deal.title,\n    ...validatedData\n  }\n}];"
+        "jsCode": "// Extraer el primer resultado\nconst searchResults = $input.all()[0].json;\nconst validatedData = $('Validar Entrada').all()[0].json;\n\nif (!searchResults.data || searchResults.data.length === 0) {\n  throw new Error(`Deal \"${validatedData.deal_name}\" no encontrado en Pipedrive`);\n}\n\n// CORRECCIÓN: La API de Pipedrive devuelve el deal directamente, no en .item\nconst deal = searchResults.data[0];\n\nreturn [{\n  json: {\n    deal_id: deal.id,\n    deal_title: deal.title,\n    ...validatedData\n  }\n}];"
       },
       "id": "extract-deal-id",
       "name": "Extraer Deal ID",
@@ -483,7 +483,7 @@
     {
       "parameters": {
         "method": "PUT",
-        "url": "https://api.pipedrive.com/v1/activities/{{ $json.data.id }}",
+        "url": "https://api.pipedrive.com/v1/activities/{{ $json.id }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "queryAuth",
         "sendQuery": true,

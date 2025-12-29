@@ -1,5 +1,5 @@
 {
-  "name": "ProfitOps - Actualizar Pipedrive v1.5.0 Solo Deal Update",
+  "name": "ProfitOps - Actualizar Pipedrive v1.6.0 DEMO BLK",
   "nodes": [
     {
       "parameters": {
@@ -94,7 +94,6 @@
         "operation": "update",
         "dealId": "={{ $('Extraer Deal ID').first().json.deal_id }}",
         "updateFields": {
-          "value": "={{ $('Extraer Deal ID').first().json.mrr }}",
           "probability": "={{ $('Extraer Deal ID').first().json.probabilidad }}",
           "expectedCloseDate": "={{ $('Extraer Deal ID').first().json.fecha_cierre }}"
         }
@@ -792,5 +791,5 @@
   "tags": [],
   "triggerCount": 0,
   "updatedAt": "2025-01-08T21:00:00.000Z",
-  "versionId": "1.5.0"
+  "versionId": "1.6.0"
 }

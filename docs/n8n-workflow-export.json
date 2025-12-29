@@ -1,5 +1,5 @@
 {
-  "name": "ProfitOps - Actualizar Pipedrive v1.4.1 Nodo Nativo Conectado",
+  "name": "ProfitOps - Actualizar Pipedrive v1.4.2 UpdateFields Corregido",
   "nodes": [
     {
       "parameters": {
@@ -146,8 +146,8 @@
         "operation": "update",
         "dealId": "={{ $json.deal_id }}",
         "productAttachmentId": "={{ $json.attachment_id }}",
-        "itemPrice": "={{ $json.item_price }}",
-        "additionalFields": {
+        "updateFields": {
+          "itemPrice": "={{ $json.item_price }}",
           "quantity": "={{ $json.quantity }}"
         }
       },
@@ -927,5 +927,5 @@
   "tags": [],
   "triggerCount": 0,
   "updatedAt": "2025-01-08T21:00:00.000Z",
-  "versionId": "1.4.1"
+  "versionId": "1.4.2"
 }

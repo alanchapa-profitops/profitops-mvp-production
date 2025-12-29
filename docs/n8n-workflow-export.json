@@ -1,5 +1,5 @@
 {
-  "name": "ProfitOps - Actualizar Pipedrive v1.4.3 HTTP con Number()",
+  "name": "ProfitOps - Actualizar Pipedrive v1.5.0 Solo Deal Update",
   "nodes": [
     {
       "parameters": {
@@ -9,21 +9,27 @@
         "options": {}
       },
       "id": "webhook-trigger",
-      "name": "Recibir Actualización",
+      "name": "Recibir Actualizaci\u00f3n",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "7f477b94-4cb6-4f41-938a-5e987e7f1254"
     },
     {
       "parameters": {
-        "jsCode": "// Validar y estructurar datos de entrada\nconst input = $input.all()[0].json;\n\nconsole.log('🔍 DEBUG - Input recibido:', JSON.stringify(input, null, 2));\n\n// Extraer datos con valores por defecto\nconst dealName = input.deal || input.body?.deal;\nconst updates = input.updates || input.body?.updates || {};\nconst actividad = input.actividad || input.body?.actividad;\nconst completarActividad = input.completar_actividad || input.body?.completar_actividad || false;\n\n// Validación básica\nif (!dealName) {\n  console.error('❌ Error: El campo \"deal\" es obligatorio');\n  throw new Error('El campo \"deal\" es obligatorio');\n}\n\nconsole.log('✅ Validación exitosa para deal:', dealName);\n\n// Preparar datos validados\nconst validated = {\n  deal_name: dealName,\n  mrr: updates.mrr || null,\n  stage_id: updates.stage_id || null,\n  probabilidad: updates.probabilidad || null,\n  fecha_cierre: updates.fecha_cierre || null,\n  nota: updates.nota || null,\n  actividad: actividad || null,\n  completar_actividad: completarActividad,\n  // Mapeo de etapas\n  stage_mapping: {\n    \"1\": 104, \"2\": 22, \"3\": 23, \"4\": 24, \"5\": 25, \"6\": 26\n  }\n};\n\nconsole.log('📋 Datos validados:', JSON.stringify(validated, null, 2));\n\nreturn [validated];"
+        "jsCode": "// Validar y estructurar datos de entrada\nconst input = $input.all()[0].json;\n\nconsole.log('\ud83d\udd0d DEBUG - Input recibido:', JSON.stringify(input, null, 2));\n\n// Extraer datos con valores por defecto\nconst dealName = input.deal || input.body?.deal;\nconst updates = input.updates || input.body?.updates || {};\nconst actividad = input.actividad || input.body?.actividad;\nconst completarActividad = input.completar_actividad || input.body?.completar_actividad || false;\n\n// Validaci\u00f3n b\u00e1sica\nif (!dealName) {\n  console.error('\u274c Error: El campo \"deal\" es obligatorio');\n  throw new Error('El campo \"deal\" es obligatorio');\n}\n\nconsole.log('\u2705 Validaci\u00f3n exitosa para deal:', dealName);\n\n// Preparar datos validados\nconst validated = {\n  deal_name: dealName,\n  mrr: updates.mrr || null,\n  stage_id: updates.stage_id || null,\n  probabilidad: updates.probabilidad || null,\n  fecha_cierre: updates.fecha_cierre || null,\n  nota: updates.nota || null,\n  actividad: actividad || null,\n  completar_actividad: completarActividad,\n  // Mapeo de etapas\n  stage_mapping: {\n    \"1\": 104, \"2\": 22, \"3\": 23, \"4\": 24, \"5\": 25, \"6\": 26\n  }\n};\n\nconsole.log('\ud83d\udccb Datos validados:', JSON.stringify(validated, null, 2));\n\nreturn [validated];"
       },
       "id": "validate-input",
       "name": "Validar Entrada",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -38,7 +44,10 @@
       "name": "Buscar Deal",
       "type": "n8n-nodes-base.pipedrive",
       "typeVersion": 1,
-      "position": [650, 300],
+      "position": [
+        650,
+        300
+      ],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
@@ -61,126 +70,23 @@
       "name": "Deal Encontrado?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [
+        850,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// CÓDIGO DEFENSIVO: Extraer deal de nodo Pipedrive nativo\n// NOTA: Los nodos nativos de Pipedrive devuelven el deal directamente en $json\nconst searchResults = $input.all()[0].json;\nconst validatedData = $('Validar Entrada').all()[0].json;\n\nconsole.log('🔍 DEBUG - Pipedrive Native Node Response:');\nconsole.log(JSON.stringify(searchResults, null, 2));\n\nlet deal = null;\n\ntry {\n  // Nodo nativo: El deal viene directamente en $json\n  if (searchResults.id) {\n    deal = searchResults;\n    console.log('✅ Deal obtenido de nodo nativo Pipedrive');\n  }\n  // Fallback: por si acaso tiene estructura data\n  else if (searchResults.data && Array.isArray(searchResults.data) && searchResults.data.length > 0) {\n    deal = searchResults.data[0];\n    console.log('✅ Estructura detectada: data[] (fallback)');\n  }\n  else if (searchResults.data && searchResults.data.items && Array.isArray(searchResults.data.items)) {\n    if (searchResults.data.items.length > 0) {\n      deal = searchResults.data.items[0].item || searchResults.data.items[0];\n      console.log('✅ Estructura detectada: data.items[].item (fallback)');\n    }\n  }\n} catch (error) {\n  console.error('❌ Error procesando estructura:', error);\n}\n\n// Validar que tenemos un deal válido\nif (!deal || !deal.id) {\n  console.error('❌ ESTRUCTURA NO RECONOCIDA O DEAL NO ENCONTRADO:');\n  console.error(JSON.stringify(searchResults, null, 2));\n  throw new Error(`Deal \"${validatedData.deal_name}\" no encontrado en Pipedrive.`);\n}\n\nconsole.log('✅ Deal extraído exitosamente:', {\n  id: deal.id,\n  title: deal.title || deal.name || 'Sin título'\n});\n\nreturn [{\n  json: {\n    deal_id: deal.id,\n    deal_title: deal.title || deal.name || validatedData.deal_name,\n    ...validatedData\n  }\n}];"
+        "jsCode": "// C\u00d3DIGO DEFENSIVO: Extraer deal de nodo Pipedrive nativo\n// NOTA: Los nodos nativos de Pipedrive devuelven el deal directamente en $json\nconst searchResults = $input.all()[0].json;\nconst validatedData = $('Validar Entrada').all()[0].json;\n\nconsole.log('\ud83d\udd0d DEBUG - Pipedrive Native Node Response:');\nconsole.log(JSON.stringify(searchResults, null, 2));\n\nlet deal = null;\n\ntry {\n  // Nodo nativo: El deal viene directamente en $json\n  if (searchResults.id) {\n    deal = searchResults;\n    console.log('\u2705 Deal obtenido de nodo nativo Pipedrive');\n  }\n  // Fallback: por si acaso tiene estructura data\n  else if (searchResults.data && Array.isArray(searchResults.data) && searchResults.data.length > 0) {\n    deal = searchResults.data[0];\n    console.log('\u2705 Estructura detectada: data[] (fallback)');\n  }\n  else if (searchResults.data && searchResults.data.items && Array.isArray(searchResults.data.items)) {\n    if (searchResults.data.items.length > 0) {\n      deal = searchResults.data.items[0].item || searchResults.data.items[0];\n      console.log('\u2705 Estructura detectada: data.items[].item (fallback)');\n    }\n  }\n} catch (error) {\n  console.error('\u274c Error procesando estructura:', error);\n}\n\n// Validar que tenemos un deal v\u00e1lido\nif (!deal || !deal.id) {\n  console.error('\u274c ESTRUCTURA NO RECONOCIDA O DEAL NO ENCONTRADO:');\n  console.error(JSON.stringify(searchResults, null, 2));\n  throw new Error(`Deal \"${validatedData.deal_name}\" no encontrado en Pipedrive.`);\n}\n\nconsole.log('\u2705 Deal extra\u00eddo exitosamente:', {\n  id: deal.id,\n  title: deal.title || deal.name || 'Sin t\u00edtulo'\n});\n\nreturn [{\n  json: {\n    deal_id: deal.id,\n    deal_title: deal.title || deal.name || validatedData.deal_name,\n    ...validatedData\n  }\n}];"
       },
       "id": "extract-deal-id",
       "name": "Extraer Deal ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 200]
-    },
-    {
-      "parameters": {
-        "resource": "product",
-        "operation": "getAll",
-        "dealId": "={{ $json.deal_id }}",
-        "returnAll": true,
-        "options": {}
-      },
-      "id": "get-products",
-      "name": "Obtener Productos",
-      "type": "n8n-nodes-base.pipedrive",
-      "typeVersion": 1,
-      "position": [1250, 200],
-      "credentials": {
-        "pipedriveApi": {
-          "id": "pipedrive-account-2",
-          "name": "Pipedrive account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// CÓDIGO DEFENSIVO: Verificar productos de nodo nativo\n// NOTA: Nodo nativo Pipedrive con dealId devuelve deal product attachments\nconst allItems = $input.all();\n\nconsole.log('🔍 DEBUG - Get Products Response (nodo nativo):');\nconsole.log('Total items recibidos:', allItems.length);\n\nif (allItems.length > 0) {\n  console.log('📊 Primer producto:', JSON.stringify(allItems[0].json, null, 2));\n}\n\nlet hasProducts = false;\n\nif (allItems && allItems.length > 0) {\n  // El nodo nativo con returnAll devuelve múltiples items\n  hasProducts = true;\n  console.log(`📊 Productos encontrados: ${allItems.length}`);\n} else {\n  console.log('📊 No se encontraron productos');\n}\n\nconsole.log(`✅ Tiene productos: ${hasProducts}`);\n\n// Retornar el primer producto con flag hasProducts\nif (hasProducts) {\n  return [{ json: { ...allItems[0].json, hasProducts: true } }];\n} else {\n  return [{ json: { hasProducts: false } }];\n}"
-      },
-      "id": "verify-products",
-      "name": "Verificar Productos",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1450, 200]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "boolean": [
-            {
-              "value1": "={{ $json.hasProducts }}",
-              "value2": true
-            }
-          ]
-        }
-      },
-      "id": "check-has-products",
-      "name": "Tiene Productos?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [1650, 200]
-    },
-    {
-      "parameters": {
-        "jsCode": "// CÓDIGO DEFENSIVO: Extraer AMBOS IDs necesarios para actualizar producto\n// IMPORTANTE: Necesitamos el attachment_id Y el catalog product_id\nconst productData = $json;\nconst dealData = $('Extraer Deal ID').first().json;\n\nconsole.log('🔍 DEBUG - Extracting Product IDs from native node:');\nconsole.log('Product data completa:', JSON.stringify(productData, null, 2));\nconsole.log('Deal ID:', dealData.deal_id);\n\nlet attachmentId = null;\nlet catalogProductId = null;\n\n// ESTRUCTURA REAL del nodo nativo:\n// - id: deal_product_attachment_id (para el endpoint)\n// - prices[0].product_id: catalog product_id (para el payload) ← CORRECCIÓN v1.3.4\nif (productData.id) {\n  attachmentId = productData.id;\n  console.log('✅ Product Attachment ID extraído:', attachmentId);\n} else {\n  console.error('❌ No se pudo extraer attachment ID');\n  console.error('productData:', JSON.stringify(productData, null, 2));\n  throw new Error('Attachment ID not found in response');\n}\n\n// CORRECCIÓN v1.3.4: Catalog product_id está en prices[0].product_id\nif (productData.prices && Array.isArray(productData.prices) && productData.prices.length > 0) {\n  if (productData.prices[0].product_id) {\n    catalogProductId = productData.prices[0].product_id;\n    console.log('✅ Catalog Product ID extraído de prices[0]:', catalogProductId);\n  } else {\n    console.error('❌ prices[0] existe pero no tiene product_id');\n    console.error('prices[0]:', JSON.stringify(productData.prices[0], null, 2));\n    throw new Error('product_id not found in prices[0]');\n  }\n} else {\n  console.error('❌ No se pudo extraer catalog product_id de prices array');\n  console.error('prices:', JSON.stringify(productData.prices, null, 2));\n  throw new Error('prices array not found or empty in response');\n}\n\nconsole.log('✅ Datos completos para actualizar producto:');\nconsole.log('  - Deal ID:', dealData.deal_id);\nconsole.log('  - Attachment ID (URL):', attachmentId);\nconsole.log('  - Catalog Product ID (payload):', catalogProductId);\nconsole.log('  - Nuevo MRR:', dealData.mrr);\n\nreturn [{\n  json: {\n    attachment_id: attachmentId,\n    catalog_product_id: catalogProductId,\n    ...dealData\n  }\n}];"
-      },
-      "id": "extract-product-id",
-      "name": "Extraer Product ID",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1850, 100]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Preparar datos para nodo nativo Pipedrive dealProduct.update (v1.4.0)\nconst dealData = $json;\n\nconsole.log('🔍 DEBUG - Preparando actualización con NODO NATIVO:');\nconsole.log('  Deal ID:', dealData.deal_id);\nconsole.log('  Attachment ID:', dealData.attachment_id);\nconsole.log('  Catalog Product ID:', dealData.catalog_product_id);\nconsole.log('  Nuevo MRR:', dealData.mrr);\n\n// Validar que tenemos todos los datos necesarios\nif (!dealData.deal_id) {\n  throw new Error('deal_id no está definido');\n}\nif (!dealData.attachment_id) {\n  throw new Error('attachment_id no está definido');\n}\nif (!dealData.mrr) {\n  console.warn('⚠️ WARNING: mrr es null o undefined, saltando actualización');\n  return [$input.item];\n}\n\nconsole.log('✅ Datos validados para nodo nativo');\nconsole.log('📤 Nodo nativo Pipedrive se encargará de la conversión de tipos');\nconsole.log('🎯 Usando: resource=\"dealProduct\", operation=\"update\"');\n\n// El nodo nativo se encarga de la conversión de tipos automáticamente\nreturn [{\n  json: {\n    ...dealData,\n    item_price: dealData.mrr,  // Nodo nativo convertirá a number\n    quantity: 1                 // Nodo nativo convertirá a number\n  }\n}];"
-      },
-      "id": "prepare-product-update",
-      "name": "Preparar Actualización Producto",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1950, 100]
-    },
-    {
-      "parameters": {
-        "method": "PUT",
-        "url": "=https://api.pipedrive.com/v1/deals/{{ Number($json.deal_id) }}/products/{{ Number($json.attachment_id) }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "pipedriveApi",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"item_price\": {{ Number($json.item_price) }},\n  \"quantity\": {{ Number($json.quantity) }}\n}",
-        "options": {
-          "headers": {
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          }
-        }
-      },
-      "id": "update-product",
-      "name": "Actualizar Producto HTTP",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [2150, 100],
-      "credentials": {
-        "pipedriveApi": {
-          "id": "pipedrive-account-2",
-          "name": "Pipedrive account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Logging de respuesta de actualización de producto (HTTP v1.4.3)\nconst response = $json;\n\nconsole.log('🎯 DEBUG - Respuesta de actualización de producto (HTTP REQUEST):');\nconsole.log('Response completa:', JSON.stringify(response, null, 2));\n\n// HTTP Request con conversión Number() en expressions\nif (response.success === true && response.data) {\n  console.log('✅ Producto actualizado exitosamente con HTTP Request + Number()');\n  console.log('💰 Nuevo precio confirmado:', response.data.item_price);\n  console.log('📦 Product Attachment ID:', response.data.id);\n  console.log('🔢 Cantidad:', response.data.quantity);\n  console.log('🎉 v1.4.3 - HTTP Request con Number() en expressions!');\n} else if (response.success === false || response.error) {\n  console.error('❌ ERROR en actualización:');\n  console.error(JSON.stringify(response, null, 2));\n} else {\n  console.warn('⚠️ Respuesta inesperada:', JSON.stringify(response, null, 2));\n}\n\nreturn [$input.item];"
-      },
-      "id": "log-product-update",
-      "name": "Log Update Producto",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [2350, 100]
+      "position": [
+        1050,
+        200
+      ]
     },
     {
       "parameters": {
@@ -197,23 +103,16 @@
       "name": "Actualizar Deal Directo",
       "type": "n8n-nodes-base.pipedrive",
       "typeVersion": 1,
-      "position": [1850, 300],
+      "position": [
+        1850,
+        300
+      ],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
           "name": "Pipedrive account 2"
         }
       }
-    },
-    {
-      "parameters": {
-        "mode": "mergeByPosition"
-      },
-      "id": "merge-updates",
-      "name": "Merge Actualización",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
-      "position": [2250, 200]
     },
     {
       "parameters": {
@@ -230,7 +129,10 @@
       "name": "Cambiar Etapa?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2450, 200]
+      "position": [
+        2450,
+        200
+      ]
     },
     {
       "parameters": {
@@ -245,7 +147,10 @@
       "name": "Actualizar Etapa",
       "type": "n8n-nodes-base.pipedrive",
       "typeVersion": 1,
-      "position": [2650, 100],
+      "position": [
+        2650,
+        100
+      ],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
@@ -259,7 +164,10 @@
       "name": "Merge Etapa",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
-      "position": [2850, 200]
+      "position": [
+        2850,
+        200
+      ]
     },
     {
       "parameters": {
@@ -276,17 +184,23 @@
       "name": "Agregar Nota?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [3050, 200]
+      "position": [
+        3050,
+        200
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Logging antes de crear nota\nconst dealData = $('Extraer Deal ID').first().json;\n\nconsole.log('📝 DEBUG - Preparando creación de nota:');\nconsole.log('  Deal ID:', dealData.deal_id);\nconsole.log('  Nota:', dealData.nota);\nconsole.log('  Nota !== null:', dealData.nota !== null);\nconsole.log('  Nota !== \"\":', dealData.nota !== '');\n\nif (!dealData.nota || dealData.nota === '') {\n  console.warn('⚠️ WARNING: Nota está vacía o null');\n} else {\n  console.log('✅ Nota válida, procediendo a crear');\n}\n\nreturn [$input.item];"
+        "jsCode": "// Logging antes de crear nota\nconst dealData = $('Extraer Deal ID').first().json;\n\nconsole.log('\ud83d\udcdd DEBUG - Preparando creaci\u00f3n de nota:');\nconsole.log('  Deal ID:', dealData.deal_id);\nconsole.log('  Nota:', dealData.nota);\nconsole.log('  Nota !== null:', dealData.nota !== null);\nconsole.log('  Nota !== \"\":', dealData.nota !== '');\n\nif (!dealData.nota || dealData.nota === '') {\n  console.warn('\u26a0\ufe0f WARNING: Nota est\u00e1 vac\u00eda o null');\n} else {\n  console.log('\u2705 Nota v\u00e1lida, procediendo a crear');\n}\n\nreturn [$input.item];"
       },
       "id": "prepare-note",
       "name": "Preparar Nota",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3150, 100]
+      "position": [
+        3150,
+        100
+      ]
     },
     {
       "parameters": {
@@ -302,7 +216,10 @@
       "name": "Crear Nota",
       "type": "n8n-nodes-base.pipedrive",
       "typeVersion": 1,
-      "position": [3350, 100],
+      "position": [
+        3350,
+        100
+      ],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
@@ -312,13 +229,16 @@
     },
     {
       "parameters": {
-        "jsCode": "// Logging de respuesta de creación de nota\nconst response = $json;\n\nconsole.log('📝 DEBUG - Respuesta de creación de nota:');\nconsole.log('Response:', JSON.stringify(response, null, 2));\n\nif (response.success !== undefined && response.success === false) {\n  console.error('❌ ERROR al crear nota:');\n  console.error(JSON.stringify(response, null, 2));\n} else {\n  console.log('✅ Nota creada exitosamente');\n}\n\nreturn [$input.item];"
+        "jsCode": "// Logging de respuesta de creaci\u00f3n de nota\nconst response = $json;\n\nconsole.log('\ud83d\udcdd DEBUG - Respuesta de creaci\u00f3n de nota:');\nconsole.log('Response:', JSON.stringify(response, null, 2));\n\nif (response.success !== undefined && response.success === false) {\n  console.error('\u274c ERROR al crear nota:');\n  console.error(JSON.stringify(response, null, 2));\n} else {\n  console.log('\u2705 Nota creada exitosamente');\n}\n\nreturn [$input.item];"
       },
       "id": "log-note-creation",
       "name": "Log Crear Nota",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3550, 100]
+      "position": [
+        3550,
+        100
+      ]
     },
     {
       "parameters": {},
@@ -326,7 +246,10 @@
       "name": "Merge Nota",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
-      "position": [3450, 200]
+      "position": [
+        3450,
+        200
+      ]
     },
     {
       "parameters": {
@@ -343,17 +266,23 @@
       "name": "Crear Actividad?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [3650, 200]
+      "position": [
+        3650,
+        200
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Mapear tipos de actividad\nconst activityTypes = {\n  \"call\": \"call\",\n  \"meeting\": \"meeting\",\n  \"task\": \"task\",\n  \"deadline\": \"deadline\",\n  \"email\": \"email\",\n  \"lunch\": \"lunch\"\n};\n\nconst dealData = $('Extraer Deal ID').first().json;\nconst actividad = dealData.actividad;\n\nconsole.log('🔍 DEBUG - Preparando actividad:', JSON.stringify(actividad, null, 2));\n\nconst activityType = activityTypes[actividad.tipo] || \"task\";\n\nconsole.log('✅ Actividad preparada:', {\n  subject: actividad.titulo,\n  type: activityType,\n  date: actividad.fecha\n});\n\nreturn [{\n  json: {\n    ...dealData,\n    activity_subject: actividad.titulo,\n    activity_type: activityType,\n    activity_due_date: actividad.fecha\n  }\n}];"
+        "jsCode": "// Mapear tipos de actividad\nconst activityTypes = {\n  \"call\": \"call\",\n  \"meeting\": \"meeting\",\n  \"task\": \"task\",\n  \"deadline\": \"deadline\",\n  \"email\": \"email\",\n  \"lunch\": \"lunch\"\n};\n\nconst dealData = $('Extraer Deal ID').first().json;\nconst actividad = dealData.actividad;\n\nconsole.log('\ud83d\udd0d DEBUG - Preparando actividad:', JSON.stringify(actividad, null, 2));\n\nconst activityType = activityTypes[actividad.tipo] || \"task\";\n\nconsole.log('\u2705 Actividad preparada:', {\n  subject: actividad.titulo,\n  type: activityType,\n  date: actividad.fecha\n});\n\nreturn [{\n  json: {\n    ...dealData,\n    activity_subject: actividad.titulo,\n    activity_type: activityType,\n    activity_due_date: actividad.fecha\n  }\n}];"
       },
       "id": "prepare-activity",
       "name": "Preparar Actividad",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3850, 100]
+      "position": [
+        3850,
+        100
+      ]
     },
     {
       "parameters": {
@@ -371,7 +300,10 @@
       "name": "Crear Actividad en Pipedrive",
       "type": "n8n-nodes-base.pipedrive",
       "typeVersion": 1,
-      "position": [4050, 100],
+      "position": [
+        4050,
+        100
+      ],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
@@ -385,7 +317,10 @@
       "name": "Merge Actividad",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
-      "position": [4250, 200]
+      "position": [
+        4250,
+        200
+      ]
     },
     {
       "parameters": {
@@ -402,7 +337,10 @@
       "name": "Completar Actividades?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [4450, 200]
+      "position": [
+        4450,
+        200
+      ]
     },
     {
       "parameters": {
@@ -418,7 +356,10 @@
       "name": "Obtener Actividades Pendientes",
       "type": "n8n-nodes-base.pipedrive",
       "typeVersion": 1,
-      "position": [4650, 100],
+      "position": [
+        4650,
+        100
+      ],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
@@ -435,7 +376,10 @@
       "name": "Loop Actividades",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [4850, 100]
+      "position": [
+        4850,
+        100
+      ]
     },
     {
       "parameters": {
@@ -450,7 +394,10 @@
       "name": "Completar Actividad",
       "type": "n8n-nodes-base.pipedrive",
       "typeVersion": 1,
-      "position": [5050, 100],
+      "position": [
+        5050,
+        100
+      ],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
@@ -464,17 +411,23 @@
       "name": "Merge Completar",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 2.1,
-      "position": [5250, 200]
+      "position": [
+        5250,
+        200
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const deal = $('Extraer Deal ID').first().json;\n\nconsole.log('🎉 Workflow completado exitosamente para deal:', deal.deal_id);\n\nreturn [{\n  json: {\n    success: true,\n    message: \"Deal actualizado exitosamente\",\n    deal: {\n      id: deal.deal_id,\n      title: deal.deal_title,\n      actualizaciones_aplicadas: {\n        mrr: deal.mrr !== null,\n        etapa: deal.stage_id !== null,\n        probabilidad: deal.probabilidad !== null,\n        fecha_cierre: deal.fecha_cierre !== null,\n        nota_agregada: deal.nota !== null,\n        actividad_creada: deal.actividad !== null,\n        actividades_completadas: deal.completar_actividad\n      }\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const deal = $('Extraer Deal ID').first().json;\n\nconsole.log('\ud83c\udf89 Workflow completado exitosamente para deal:', deal.deal_id);\n\nreturn [{\n  json: {\n    success: true,\n    message: \"Deal actualizado exitosamente\",\n    deal: {\n      id: deal.deal_id,\n      title: deal.deal_title,\n      actualizaciones_aplicadas: {\n        mrr: deal.mrr !== null,\n        etapa: deal.stage_id !== null,\n        probabilidad: deal.probabilidad !== null,\n        fecha_cierre: deal.fecha_cierre !== null,\n        nota_agregada: deal.nota !== null,\n        actividad_creada: deal.actividad !== null,\n        actividades_completadas: deal.completar_actividad\n      }\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
       },
       "id": "final-response",
       "name": "Respuesta Final",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [5450, 200]
+      "position": [
+        5450,
+        200
+      ]
     },
     {
       "parameters": {
@@ -485,17 +438,23 @@
       "name": "Responder Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [5650, 200]
+      "position": [
+        5650,
+        200
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const validatedData = $('Validar Entrada').first().json;\n\nconsole.error('❌ Deal no encontrado:', validatedData.deal_name);\n\nreturn [{\n  json: {\n    success: false,\n    error: \"Deal no encontrado\",\n    message: `No se encontró ningún deal con el nombre \"${validatedData.deal_name}\" en Pipedrive`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const validatedData = $('Validar Entrada').first().json;\n\nconsole.error('\u274c Deal no encontrado:', validatedData.deal_name);\n\nreturn [{\n  json: {\n    success: false,\n    error: \"Deal no encontrado\",\n    message: `No se encontr\u00f3 ning\u00fan deal con el nombre \"${validatedData.deal_name}\" en Pipedrive`,\n    timestamp: new Date().toISOString()\n  }\n}];"
       },
       "id": "error-deal-not-found",
       "name": "Error - Deal No Encontrado",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 400]
+      "position": [
+        1050,
+        400
+      ]
     },
     {
       "parameters": {
@@ -506,11 +465,14 @@
       "name": "Responder Error",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1250, 400]
+      "position": [
+        1250,
+        400
+      ]
     }
   ],
   "connections": {
-    "Recibir Actualización": {
+    "Recibir Actualizaci\u00f3n": {
       "main": [
         [
           {
@@ -565,46 +527,6 @@
       "main": [
         [
           {
-            "node": "Obtener Productos",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Obtener Productos": {
-      "main": [
-        [
-          {
-            "node": "Verificar Productos",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Verificar Productos": {
-      "main": [
-        [
-          {
-            "node": "Tiene Productos?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tiene Productos?": {
-      "main": [
-        [
-          {
-            "node": "Extraer Product ID",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
             "node": "Actualizar Deal Directo",
             "type": "main",
             "index": 0
@@ -612,62 +534,7 @@
         ]
       ]
     },
-    "Extraer Product ID": {
-      "main": [
-        [
-          {
-            "node": "Preparar Actualización Producto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Preparar Actualización Producto": {
-      "main": [
-        [
-          {
-            "node": "Actualizar Producto HTTP",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Actualizar Producto HTTP": {
-      "main": [
-        [
-          {
-            "node": "Log Update Producto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Log Update Producto": {
-      "main": [
-        [
-          {
-            "node": "Merge Actualización",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Actualizar Deal Directo": {
-      "main": [
-        [
-          {
-            "node": "Merge Actualización",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge Actualización": {
       "main": [
         [
           {
@@ -862,9 +729,10 @@
     },
     "Loop Actividades": {
       "main": [
+        null,
         [
           {
-            "node": "Completar Actividad",
+            "node": "Merge Completar",
             "type": "main",
             "index": 0
           }
@@ -876,18 +744,6 @@
         [
           {
             "node": "Loop Actividades",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Actividades": {
-      "main": [
-        null,
-        [
-          {
-            "node": "Merge Completar",
             "type": "main",
             "index": 0
           }
@@ -936,5 +792,5 @@
   "tags": [],
   "triggerCount": 0,
   "updatedAt": "2025-01-08T21:00:00.000Z",
-  "versionId": "1.4.3"
+  "versionId": "1.5.0"
 }

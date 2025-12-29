@@ -1,5 +1,5 @@
 {
-  "name": "ProfitOps - Actualizar Pipedrive v1.4.2 UpdateFields Corregido",
+  "name": "ProfitOps - Actualizar Pipedrive v1.4.3 HTTP con Number()",
   "nodes": [
     {
       "parameters": {
@@ -142,19 +142,28 @@
     },
     {
       "parameters": {
-        "resource": "dealProduct",
-        "operation": "update",
-        "dealId": "={{ $json.deal_id }}",
-        "productAttachmentId": "={{ $json.attachment_id }}",
-        "updateFields": {
-          "itemPrice": "={{ $json.item_price }}",
-          "quantity": "={{ $json.quantity }}"
+        "method": "PUT",
+        "url": "=https://api.pipedrive.com/v1/deals/{{ Number($json.deal_id) }}/products/{{ Number($json.attachment_id) }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "pipedriveApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"item_price\": {{ Number($json.item_price) }},\n  \"quantity\": {{ Number($json.quantity) }}\n}",
+        "options": {
+          "headers": {
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
         }
       },
       "id": "update-product",
-      "name": "Actualizar Producto Nativo",
-      "type": "n8n-nodes-base.pipedrive",
-      "typeVersion": 1,
+      "name": "Actualizar Producto HTTP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [2150, 100],
       "credentials": {
         "pipedriveApi": {
@@ -165,7 +174,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Logging de respuesta de actualización de producto (NODO NATIVO v1.4.0)\nconst response = $json;\n\nconsole.log('🎯 DEBUG - Respuesta de actualización de producto (NODO NATIVO):');\nconsole.log('Response completa:', JSON.stringify(response, null, 2));\n\n// Nodo nativo Pipedrive devuelve directamente los datos\nif (response.id && response.item_price) {\n  console.log('✅ Producto actualizado exitosamente con NODO NATIVO Pipedrive');\n  console.log('💰 Nuevo precio confirmado:', response.item_price);\n  console.log('📦 Product Attachment ID:', response.id);\n  console.log('🔢 Cantidad:', response.quantity);\n  console.log('🎉 v1.4.0 - Sin HTTP Request, solo nodos nativos!');\n} else {\n  console.warn('⚠️ Respuesta inesperada del nodo nativo:', JSON.stringify(response, null, 2));\n}\n\nreturn [$input.item];"
+        "jsCode": "// Logging de respuesta de actualización de producto (HTTP v1.4.3)\nconst response = $json;\n\nconsole.log('🎯 DEBUG - Respuesta de actualización de producto (HTTP REQUEST):');\nconsole.log('Response completa:', JSON.stringify(response, null, 2));\n\n// HTTP Request con conversión Number() en expressions\nif (response.success === true && response.data) {\n  console.log('✅ Producto actualizado exitosamente con HTTP Request + Number()');\n  console.log('💰 Nuevo precio confirmado:', response.data.item_price);\n  console.log('📦 Product Attachment ID:', response.data.id);\n  console.log('🔢 Cantidad:', response.data.quantity);\n  console.log('🎉 v1.4.3 - HTTP Request con Number() en expressions!');\n} else if (response.success === false || response.error) {\n  console.error('❌ ERROR en actualización:');\n  console.error(JSON.stringify(response, null, 2));\n} else {\n  console.warn('⚠️ Respuesta inesperada:', JSON.stringify(response, null, 2));\n}\n\nreturn [$input.item];"
       },
       "id": "log-product-update",
       "name": "Log Update Producto",
@@ -618,14 +627,14 @@
       "main": [
         [
           {
-            "node": "Actualizar Producto Nativo",
+            "node": "Actualizar Producto HTTP",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Actualizar Producto Nativo": {
+    "Actualizar Producto HTTP": {
       "main": [
         [
           {
@@ -927,5 +936,5 @@
   "tags": [],
   "triggerCount": 0,
   "updatedAt": "2025-01-08T21:00:00.000Z",
-  "versionId": "1.4.2"
+  "versionId": "1.4.3"
 }

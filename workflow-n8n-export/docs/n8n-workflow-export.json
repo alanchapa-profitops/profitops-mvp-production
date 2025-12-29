@@ -1,5 +1,5 @@
 {
-  "name": "ProfitOps - Actualizar Pipedrive v1.3.1 Fix Products",
+  "name": "ProfitOps - Actualizar Pipedrive v1.3.2 Debug",
   "nodes": [
     {
       "parameters": {
@@ -132,6 +132,16 @@
     },
     {
       "parameters": {
+        "jsCode": "// Preparar request para actualizar producto en deal\nconst dealData = $json;\n\nconsole.log('🔍 DEBUG - Preparando actualización de producto:');\nconsole.log('  Deal ID:', dealData.deal_id);\nconsole.log('  Product Attachment ID:', dealData.product_id);\nconsole.log('  Nuevo MRR:', dealData.mrr);\n\n// Validar que tenemos todos los datos necesarios\nif (!dealData.deal_id) {\n  throw new Error('deal_id no está definido');\n}\nif (!dealData.product_id) {\n  throw new Error('product_id no está definido');\n}\nif (!dealData.mrr) {\n  console.warn('⚠️ WARNING: mrr es null o undefined, saltando actualización');\n  return [$input.item];\n}\n\nconsole.log('✅ Datos validados, listo para actualizar');\n\nreturn [$input.item];"
+      },
+      "id": "prepare-product-update",
+      "name": "Preparar Actualización Producto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1950, 100]
+    },
+    {
+      "parameters": {
         "method": "PUT",
         "url": "=https://api.pipedrive.com/v1/deals/{{ $json.deal_id }}/products/{{ $json.product_id }}",
         "authentication": "predefinedCredentialType",
@@ -139,25 +149,29 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"item_price\": {{ $json.mrr }},\n  \"quantity\": 1\n}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
+        "options": {}
       },
       "id": "update-product",
       "name": "Actualizar Producto",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2050, 100],
+      "position": [2150, 100],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
           "name": "Pipedrive account 2"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Logging de respuesta de actualización de producto\nconst response = $json;\n\nconsole.log('🎯 DEBUG - Respuesta de actualización de producto:');\nconsole.log('Status Code:', $execution.metadata?.statusCode || 'N/A');\nconsole.log('Response:', JSON.stringify(response, null, 2));\n\nif (response.success === false || response.error) {\n  console.error('❌ ERROR en actualización:');\n  console.error(JSON.stringify(response, null, 2));\n}\n\nreturn [$input.item];"
+      },
+      "id": "log-product-update",
+      "name": "Log Update Producto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2350, 100]
     },
     {
       "parameters": {
@@ -257,6 +271,16 @@
     },
     {
       "parameters": {
+        "jsCode": "// Logging antes de crear nota\nconst dealData = $('Extraer Deal ID').first().json;\n\nconsole.log('📝 DEBUG - Preparando creación de nota:');\nconsole.log('  Deal ID:', dealData.deal_id);\nconsole.log('  Nota:', dealData.nota);\nconsole.log('  Nota !== null:', dealData.nota !== null);\nconsole.log('  Nota !== \"\":', dealData.nota !== '');\n\nif (!dealData.nota || dealData.nota === '') {\n  console.warn('⚠️ WARNING: Nota está vacía o null');\n} else {\n  console.log('✅ Nota válida, procediendo a crear');\n}\n\nreturn [$input.item];"
+      },
+      "id": "prepare-note",
+      "name": "Preparar Nota",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3150, 100]
+    },
+    {
+      "parameters": {
         "resource": "note",
         "operation": "create",
         "content": "={{ $('Extraer Deal ID').first().json.nota }}",
@@ -269,13 +293,23 @@
       "name": "Crear Nota",
       "type": "n8n-nodes-base.pipedrive",
       "typeVersion": 1,
-      "position": [3250, 100],
+      "position": [3350, 100],
       "credentials": {
         "pipedriveApi": {
           "id": "pipedrive-account-2",
           "name": "Pipedrive account 2"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Logging de respuesta de creación de nota\nconst response = $json;\n\nconsole.log('📝 DEBUG - Respuesta de creación de nota:');\nconsole.log('Response:', JSON.stringify(response, null, 2));\n\nif (response.success !== undefined && response.success === false) {\n  console.error('❌ ERROR al crear nota:');\n  console.error(JSON.stringify(response, null, 2));\n} else {\n  console.log('✅ Nota creada exitosamente');\n}\n\nreturn [$input.item];"
+      },
+      "id": "log-note-creation",
+      "name": "Log Crear Nota",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3550, 100]
     },
     {
       "parameters": {},
@@ -573,6 +607,17 @@
       "main": [
         [
           {
+            "node": "Preparar Actualización Producto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Actualización Producto": {
+      "main": [
+        [
+          {
             "node": "Actualizar Producto",
             "type": "main",
             "index": 0
@@ -581,6 +626,17 @@
       ]
     },
     "Actualizar Producto": {
+      "main": [
+        [
+          {
+            "node": "Log Update Producto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Update Producto": {
       "main": [
         [
           {
@@ -657,7 +713,7 @@
       "main": [
         [
           {
-            "node": "Crear Nota",
+            "node": "Preparar Nota",
             "type": "main",
             "index": 0
           }
@@ -671,7 +727,29 @@
         ]
       ]
     },
+    "Preparar Nota": {
+      "main": [
+        [
+          {
+            "node": "Crear Nota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Crear Nota": {
+      "main": [
+        [
+          {
+            "node": "Log Crear Nota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Crear Nota": {
       "main": [
         [
           {
@@ -848,6 +926,6 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2025-01-08T18:30:00.000Z",
-  "versionId": "1.3.1"
+  "updatedAt": "2025-01-08T20:00:00.000Z",
+  "versionId": "1.3.2"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "ProfitOps - Actualizar Pipedrive v1.3.5 Fix Number Types",
+  "name": "ProfitOps - Actualizar Pipedrive v1.4.0 Nodo Nativo DealProduct",
   "nodes": [
     {
       "parameters": {
@@ -132,7 +132,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Preparar request para actualizar producto en deal\n// CORRECCIÓN v1.3.5: Convertir valores a NUMBER para evitar error 500\nconst dealData = $json;\n\nconsole.log('🔍 DEBUG - Preparando actualización de producto:');\nconsole.log('  Deal ID:', dealData.deal_id, '(tipo:', typeof dealData.deal_id, ')');\nconsole.log('  Attachment ID (para URL):', dealData.attachment_id, '(tipo:', typeof dealData.attachment_id, ')');\nconsole.log('  Catalog Product ID (para payload):', dealData.catalog_product_id, '(tipo:', typeof dealData.catalog_product_id, ')');\nconsole.log('  Nuevo MRR:', dealData.mrr, '(tipo:', typeof dealData.mrr, ')');\n\n// Validar que tenemos todos los datos necesarios\nif (!dealData.deal_id) {\n  throw new Error('deal_id no está definido');\n}\nif (!dealData.attachment_id) {\n  throw new Error('attachment_id no está definido');\n}\nif (!dealData.catalog_product_id) {\n  throw new Error('catalog_product_id no está definido - REQUERIDO por Pipedrive API');\n}\nif (!dealData.mrr) {\n  console.warn('⚠️ WARNING: mrr es null o undefined, saltando actualización');\n  return [$input.item];\n}\n\n// CRITICAL FIX v1.3.5: Convertir explícitamente a números\n// Pipedrive API requiere tipos NUMBER, no STRING\nconst catalogProductIdNum = Number(dealData.catalog_product_id);\nconst itemPriceNum = Number(dealData.mrr);\nconst dealIdNum = Number(dealData.deal_id);\nconst attachmentIdNum = Number(dealData.attachment_id);\n\nconsole.log('\\n🔢 CONVERSIÓN A NÚMEROS (v1.3.5):');\nconsole.log('  catalog_product_id:', dealData.catalog_product_id, '→', catalogProductIdNum, '(tipo:', typeof catalogProductIdNum, ')');\nconsole.log('  item_price:', dealData.mrr, '→', itemPriceNum, '(tipo:', typeof itemPriceNum, ')');\nconsole.log('  deal_id:', dealData.deal_id, '→', dealIdNum, '(tipo:', typeof dealIdNum, ')');\nconsole.log('  attachment_id:', dealData.attachment_id, '→', attachmentIdNum, '(tipo:', typeof attachmentIdNum, ')');\n\n// Validar que las conversiones fueron exitosas\nif (isNaN(catalogProductIdNum) || isNaN(itemPriceNum) || isNaN(dealIdNum) || isNaN(attachmentIdNum)) {\n  console.error('❌ ERROR: No se pudieron convertir valores a números');\n  console.error('  catalogProductIdNum:', catalogProductIdNum, 'isNaN:', isNaN(catalogProductIdNum));\n  console.error('  itemPriceNum:', itemPriceNum, 'isNaN:', isNaN(itemPriceNum));\n  console.error('  dealIdNum:', dealIdNum, 'isNaN:', isNaN(dealIdNum));\n  console.error('  attachmentIdNum:', attachmentIdNum, 'isNaN:', isNaN(attachmentIdNum));\n  throw new Error('Error convirtiendo valores a números');\n}\n\nconsole.log('\\n✅ Datos validados y convertidos a números');\nconsole.log('📤 Payload que se enviará a Pipedrive:');\nconsole.log('  - product_id:', catalogProductIdNum, '(NUMBER)');\nconsole.log('  - item_price:', itemPriceNum, '(NUMBER)');\nconsole.log('  - quantity: 1 (NUMBER)');\n\nreturn [{\n  json: {\n    ...dealData,\n    deal_id: dealIdNum,\n    attachment_id: attachmentIdNum,\n    catalog_product_id: catalogProductIdNum,\n    item_price: itemPriceNum,\n    quantity: 1\n  }\n}];"
+        "jsCode": "// Preparar datos para nodo nativo Pipedrive dealProduct.update (v1.4.0)\nconst dealData = $json;\n\nconsole.log('🔍 DEBUG - Preparando actualización con NODO NATIVO:');\nconsole.log('  Deal ID:', dealData.deal_id);\nconsole.log('  Attachment ID:', dealData.attachment_id);\nconsole.log('  Catalog Product ID:', dealData.catalog_product_id);\nconsole.log('  Nuevo MRR:', dealData.mrr);\n\n// Validar que tenemos todos los datos necesarios\nif (!dealData.deal_id) {\n  throw new Error('deal_id no está definido');\n}\nif (!dealData.attachment_id) {\n  throw new Error('attachment_id no está definido');\n}\nif (!dealData.mrr) {\n  console.warn('⚠️ WARNING: mrr es null o undefined, saltando actualización');\n  return [$input.item];\n}\n\nconsole.log('✅ Datos validados para nodo nativo');\nconsole.log('📤 Nodo nativo Pipedrive se encargará de la conversión de tipos');\nconsole.log('🎯 Usando: resource=\"dealProduct\", operation=\"update\"');\n\n// El nodo nativo se encarga de la conversión de tipos automáticamente\nreturn [{\n  json: {\n    ...dealData,\n    item_price: dealData.mrr,  // Nodo nativo convertirá a number\n    quantity: 1                 // Nodo nativo convertirá a number\n  }\n}];"
       },
       "id": "prepare-product-update",
       "name": "Preparar Actualización Producto",
@@ -142,28 +142,19 @@
     },
     {
       "parameters": {
-        "method": "PUT",
-        "url": "=https://api.pipedrive.com/v1/deals/{{ $json.deal_id }}/products/{{ $json.attachment_id }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "pipedriveApi",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"product_id\": {{ $json.catalog_product_id }},\n  \"item_price\": {{ $json.item_price }},\n  \"quantity\": {{ $json.quantity }}\n}",
-        "options": {
-          "headers": {
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json"
-              }
-            ]
-          }
+        "resource": "dealProduct",
+        "operation": "update",
+        "dealId": "={{ $json.deal_id }}",
+        "productAttachmentId": "={{ $json.attachment_id }}",
+        "itemPrice": "={{ $json.item_price }}",
+        "additionalFields": {
+          "quantity": "={{ $json.quantity }}"
         }
       },
       "id": "update-product",
-      "name": "Actualizar Producto",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Actualizar Producto Nativo",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
       "position": [2150, 100],
       "credentials": {
         "pipedriveApi": {
@@ -174,7 +165,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Logging de respuesta de actualización de producto\nconst response = $json;\n\nconsole.log('🎯 DEBUG - Respuesta de actualización de producto:');\nconsole.log('Status Code:', $execution.metadata?.statusCode || 'N/A');\nconsole.log('Response completa:', JSON.stringify(response, null, 2));\n\nif (response.success === false || response.error) {\n  console.error('❌ ERROR en actualización:');\n  console.error(JSON.stringify(response, null, 2));\n} else if (response.success === true || response.data) {\n  console.log('✅ Producto actualizado exitosamente en Pipedrive');\n  if (response.data && response.data.item_price) {\n    console.log('💰 Nuevo precio confirmado:', response.data.item_price);\n  }\n} else {\n  console.warn('⚠️ Respuesta inesperada:', JSON.stringify(response, null, 2));\n}\n\nreturn [$input.item];"
+        "jsCode": "// Logging de respuesta de actualización de producto (NODO NATIVO v1.4.0)\nconst response = $json;\n\nconsole.log('🎯 DEBUG - Respuesta de actualización de producto (NODO NATIVO):');\nconsole.log('Response completa:', JSON.stringify(response, null, 2));\n\n// Nodo nativo Pipedrive devuelve directamente los datos\nif (response.id && response.item_price) {\n  console.log('✅ Producto actualizado exitosamente con NODO NATIVO Pipedrive');\n  console.log('💰 Nuevo precio confirmado:', response.item_price);\n  console.log('📦 Product Attachment ID:', response.id);\n  console.log('🔢 Cantidad:', response.quantity);\n  console.log('🎉 v1.4.0 - Sin HTTP Request, solo nodos nativos!');\n} else {\n  console.warn('⚠️ Respuesta inesperada del nodo nativo:', JSON.stringify(response, null, 2));\n}\n\nreturn [$input.item];"
       },
       "id": "log-product-update",
       "name": "Log Update Producto",
@@ -936,5 +927,5 @@
   "tags": [],
   "triggerCount": 0,
   "updatedAt": "2025-01-08T21:00:00.000Z",
-  "versionId": "1.3.5"
+  "versionId": "1.4.0"
 }

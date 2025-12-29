@@ -1,5 +1,5 @@
 {
-  "name": "ProfitOps - Actualizar Pipedrive v1.3.3 Fix Error 500",
+  "name": "ProfitOps - Actualizar Pipedrive v1.3.4 Fix Prices Array",
   "nodes": [
     {
       "parameters": {
@@ -122,7 +122,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// CÓDIGO DEFENSIVO: Extraer AMBOS IDs necesarios para actualizar producto\n// IMPORTANTE: Necesitamos el attachment_id Y el catalog product_id\nconst productData = $json;\nconst dealData = $('Extraer Deal ID').first().json;\n\nconsole.log('🔍 DEBUG - Extracting Product IDs from native node:');\nconsole.log('Product data completa:', JSON.stringify(productData, null, 2));\nconsole.log('Deal ID:', dealData.deal_id);\n\nlet attachmentId = null;\nlet catalogProductId = null;\n\n// El nodo nativo devuelve:\n// - id: deal_product_attachment_id (para el endpoint)\n// - product_id: catalog product_id (para el payload)\nif (productData.id) {\n  attachmentId = productData.id;\n  console.log('✅ Product Attachment ID extraído:', attachmentId);\n} else {\n  console.error('❌ No se pudo extraer attachment ID');\n  throw new Error('Attachment ID not found in response');\n}\n\nif (productData.product_id) {\n  catalogProductId = productData.product_id;\n  console.log('✅ Catalog Product ID extraído:', catalogProductId);\n} else {\n  console.error('❌ No se pudo extraer catalog product_id');\n  throw new Error('Catalog product_id not found in response');\n}\n\nconsole.log('✅ Datos completos para actualizar producto:');\nconsole.log('  - Deal ID:', dealData.deal_id);\nconsole.log('  - Attachment ID (URL):', attachmentId);\nconsole.log('  - Catalog Product ID (payload):', catalogProductId);\nconsole.log('  - Nuevo MRR:', dealData.mrr);\n\nreturn [{\n  json: {\n    attachment_id: attachmentId,\n    catalog_product_id: catalogProductId,\n    ...dealData\n  }\n}];"
+        "jsCode": "// CÓDIGO DEFENSIVO: Extraer AMBOS IDs necesarios para actualizar producto\n// IMPORTANTE: Necesitamos el attachment_id Y el catalog product_id\nconst productData = $json;\nconst dealData = $('Extraer Deal ID').first().json;\n\nconsole.log('🔍 DEBUG - Extracting Product IDs from native node:');\nconsole.log('Product data completa:', JSON.stringify(productData, null, 2));\nconsole.log('Deal ID:', dealData.deal_id);\n\nlet attachmentId = null;\nlet catalogProductId = null;\n\n// ESTRUCTURA REAL del nodo nativo:\n// - id: deal_product_attachment_id (para el endpoint)\n// - prices[0].product_id: catalog product_id (para el payload) ← CORRECCIÓN v1.3.4\nif (productData.id) {\n  attachmentId = productData.id;\n  console.log('✅ Product Attachment ID extraído:', attachmentId);\n} else {\n  console.error('❌ No se pudo extraer attachment ID');\n  console.error('productData:', JSON.stringify(productData, null, 2));\n  throw new Error('Attachment ID not found in response');\n}\n\n// CORRECCIÓN v1.3.4: Catalog product_id está en prices[0].product_id\nif (productData.prices && Array.isArray(productData.prices) && productData.prices.length > 0) {\n  if (productData.prices[0].product_id) {\n    catalogProductId = productData.prices[0].product_id;\n    console.log('✅ Catalog Product ID extraído de prices[0]:', catalogProductId);\n  } else {\n    console.error('❌ prices[0] existe pero no tiene product_id');\n    console.error('prices[0]:', JSON.stringify(productData.prices[0], null, 2));\n    throw new Error('product_id not found in prices[0]');\n  }\n} else {\n  console.error('❌ No se pudo extraer catalog product_id de prices array');\n  console.error('prices:', JSON.stringify(productData.prices, null, 2));\n  throw new Error('prices array not found or empty in response');\n}\n\nconsole.log('✅ Datos completos para actualizar producto:');\nconsole.log('  - Deal ID:', dealData.deal_id);\nconsole.log('  - Attachment ID (URL):', attachmentId);\nconsole.log('  - Catalog Product ID (payload):', catalogProductId);\nconsole.log('  - Nuevo MRR:', dealData.mrr);\n\nreturn [{\n  json: {\n    attachment_id: attachmentId,\n    catalog_product_id: catalogProductId,\n    ...dealData\n  }\n}];"
       },
       "id": "extract-product-id",
       "name": "Extraer Product ID",
@@ -927,5 +927,5 @@
   "tags": [],
   "triggerCount": 0,
   "updatedAt": "2025-01-08T21:00:00.000Z",
-  "versionId": "1.3.3"
+  "versionId": "1.3.4"
 }
